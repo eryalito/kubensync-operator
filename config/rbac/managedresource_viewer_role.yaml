@@ -1,0 +1,27 @@
+# permissions for end users to view managedresources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: managedresource-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: operator
+    app.kubernetes.io/part-of: operator
+    app.kubernetes.io/managed-by: kustomize
+  name: managedresource-viewer-role
+rules:
+- apiGroups:
+  - automation.kubensync.com
+  resources:
+  - managedresources
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - automation.kubensync.com
+  resources:
+  - managedresources/status
+  verbs:
+  - get
