@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
-	"github.com/kubensync/operator/controllers"
+	"github.com/kubensync/operator/pkg/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
