@@ -30,7 +30,7 @@ type NamespaceController struct {
 // ...
 func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// Handle the namespace event here
-	logrus.Debugf("Reconciling namespace %s", req.NamespacedName)
+	logrus.Infof("Reconciling namespace %s", req.NamespacedName)
 	ns := &corev1.Namespace{}
 	err := r.Get(ctx, req.NamespacedName, ns)
 	if err != nil {

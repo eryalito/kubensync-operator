@@ -1,0 +1,49 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: kubensync.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ManagedResource is the Schema for the managedresources API
+      displayName: Managed Resource
+      kind: ManagedResource
+      name: managedresources.automation.kubensync.com
+      version: v1alpha1
+  description: Automatic resource management based on namespaces
+  displayName: KubeNSync
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - managed
+  - resources
+  - automatic
+  links:
+  - name: Kubensync
+    url: https://kubensync.domain
+  maturity: alpha
+  provider:
+    name: eryalito
+  maintainers:
+  - name: eryalito
+    email: eryalito@gmail.com
+  version: 0.0.0

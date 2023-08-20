@@ -54,7 +54,7 @@ type ManagedResourceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logrus.Debugf("Reconciling ManagedResource %s", req.NamespacedName)
+	logrus.Infof("Reconciling ManagedResource %s", req.NamespacedName)
 	mr := &automationv1alpha1.ManagedResource{}
 	err := r.Get(ctx, req.NamespacedName, mr)
 	if err != nil {
