@@ -29,7 +29,6 @@ import (
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
 	"github.com/kubensync/operator/pkg/kube"
 	"github.com/kubensync/operator/pkg/reconciler"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -39,6 +38,8 @@ type ManagedResourceReconciler struct {
 	Scheme *runtime.Scheme
 	config *rest.Config
 }
+
+var managedResourceController = ctrl.Log.WithName("managedresource_controller")
 
 //+kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/status,verbs=get;update;patch
@@ -54,7 +55,7 @@ type ManagedResourceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logrus.Infof("Reconciling ManagedResource %s", req.NamespacedName)
+	namespaceControllerLogger.Info("Reconciling ManagedResource", "name", req.Name)
 	mr := &automationv1alpha1.ManagedResource{}
 	err := r.Get(ctx, req.NamespacedName, mr)
 	if err != nil {
@@ -65,6 +66,9 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	err = reconcileManagedResource(ctx, r.config, mr)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 

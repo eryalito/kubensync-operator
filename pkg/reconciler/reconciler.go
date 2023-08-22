@@ -10,7 +10,6 @@ import (
 
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
 	"github.com/kubensync/operator/pkg/kube"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type Reconciler struct {
@@ -27,7 +27,10 @@ type Reconciler struct {
 	RestConfig *rest.Config
 }
 
-var mutex = sync.Mutex{}
+var (
+	mutex            = sync.Mutex{}
+	reconcilerLogger = ctrl.Log.WithName("reconciler")
+)
 
 func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) error {
 	mutex.Lock()
@@ -37,13 +40,12 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 	regex, err := regexp.Compile(mrDef.Spec.NamespaceSelector.Regex)
 	if err != nil {
-		logrus.Debugf("Invalid namespace selector regex for ManagedResource %v", mrDef.Name)
 		return err
 	}
 	if !regex.MatchString(namespace.Name) {
 		return nil
 	}
-	logrus.Debugf("Reconciling namespace %s for ManagedResource %s", namespace.Namespace, mrDef.Name)
+	reconcilerLogger.Info("Reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
 	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template.Literal, namespace)
 	if err != nil {
 		return err
@@ -57,7 +59,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 1024)
 		if err := decoder.Decode(obj); err != nil {
-			logrus.Errorf("Error decoding manifest: %v\n", err)
+			reconcilerLogger.Error(err, "Error deconding manifests")
 			continue
 		}
 
@@ -79,7 +81,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			return err
 		}
 	}
-	logrus.Debugf("End reconciling namespace %s for ManagedResource %s\n", namespace.Name, mrDef.Name)
+	reconcilerLogger.Info("End reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
 	return nil
 }
 

@@ -17,7 +17,6 @@ import (
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
 	"github.com/kubensync/operator/pkg/kube"
 	"github.com/kubensync/operator/pkg/reconciler"
-	"github.com/sirupsen/logrus"
 )
 
 // NamespaceController reconciles Custom Resources and responds to namespace events.
@@ -27,10 +26,12 @@ type NamespaceController struct {
 	config *rest.Config
 }
 
+var namespaceControllerLogger = ctrl.Log.WithName("namespace_controller")
+
 // ...
 func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// Handle the namespace event here
-	logrus.Infof("Reconciling namespace %s", req.NamespacedName)
+	namespaceControllerLogger.Info("Reconciling Namespace", "name", req.Name)
 	ns := &corev1.Namespace{}
 	err := r.Get(ctx, req.NamespacedName, ns)
 	if err != nil {
@@ -41,6 +42,9 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 	err = reconcileNamespace(ctx, r.config, ns)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	return reconcile.Result{}, nil
 }
 
