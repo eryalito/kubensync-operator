@@ -20,11 +20,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ManagedResourceSpecNamespaceSelector defines the selector used to specify which namespaces are affected
 type ManagedResourceSpecNamespaceSelector struct {
+	// Regex that the namespace name must match to be selected
 	Regex string `json:"regex,omitempty"`
 }
 
+// ManagedResourceSpecTemplate defines the resources to be created when a namespace matches the selector
 type ManagedResourceSpecTemplate struct {
+	// Literal defines a go template to be renderized for each namespace matching the selector
 	Literal string `json:"literal,omitempty"`
 }
 
