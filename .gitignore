@@ -24,7 +24,3 @@ Dockerfile.cross
 *.swp
 *.swo
 *~
-
-# building files and directories
-bundle
-bundle.Dockerfile
