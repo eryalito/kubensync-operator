@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    createdAt: "2023-08-22T20:45:51Z"
+    createdAt: "2023-08-22T21:42:09Z"
     operators.operatorframework.io/builder: operator-sdk-v1.28.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: kubensync.v0.0.1

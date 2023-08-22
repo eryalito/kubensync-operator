@@ -35,13 +35,20 @@ spec:
             description: ManagedResourceSpec defines the desired state of ManagedResource
             properties:
               namespaceSelector:
+                description: ManagedResourceSpecNamespaceSelector defines the selector
+                  used to specify which namespaces are affected
                 properties:
                   regex:
+                    description: Regex that the namespace name must match to be selected
                     type: string
                 type: object
               template:
+                description: ManagedResourceSpecTemplate defines the resources to
+                  be created when a namespace matches the selector
                 properties:
                   literal:
+                    description: Literal defines a go template to be renderized for
+                      each namespace matching the selector
                     type: string
                 type: object
             type: object
