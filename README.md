@@ -93,10 +93,10 @@ Here are some example use cases for the kubensync operator:
     apiVersion: automation.kubensync.com/v1alpha1
     kind: ManagedResource
     metadata:
-    name: serviceaccount-sample
+      name: serviceaccount-sample
     spec:
-    namespaceSelector:
-      regex: "test"
+      namespaceSelector:
+        regex: "test"
     template:
       literal: |
         ---
@@ -111,43 +111,43 @@ Here are some example use cases for the kubensync operator:
     apiVersion: automation.kubensync.com/v1alpha1
     kind: ManagedResource
     metadata:
-    name: pullsecret-sample
+      name: pullsecret-sample
     spec:
-    namespaceSelector:
+      namespaceSelector:
         regex: "dev-.*"
     template:
-        literal: |
-          ---
-          apiVersion: v1
-          kind: Secret
-          metadata:
-              name: my-pull-secret
-              namespace: {{ .Namespace.Name }}
-          type: kubernetes.io/dockerconfigjson
-          data:
-              .dockerconfigjson: <your pull secret in base64>
+      literal: |
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+            name: my-pull-secret
+            namespace: {{ .Namespace.Name }}
+        type: kubernetes.io/dockerconfigjson
+        data:
+            .dockerconfigjson: <your pull secret in base64>
     ```
 3. **Setting Up RBAC Rules in Specific Namespaces**:
     ```yaml
     apiVersion: automation.kubensync.com/v1alpha1
     kind: ManagedResource
     metadata:
-    name: rbac-sample
+      name: rbac-sample
     spec:
-    namespaceSelector:
+      namespaceSelector:
         regex: "(namespace1|namespace2)"
     template:
-        literal: |
-          ---
-          apiVersion: rbac.authorization.k8s.io/v1
-          kind: Role
-          metadata:
-              name: my-role
-              namespace: {{ .Namespace.Name }}
-          rules:
-              - apiGroups: [""]
-              resources: ["pods"]
-              verbs: ["get", "list", "watch"]
+      literal: |
+        ---
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+            name: my-role
+            namespace: {{ .Namespace.Name }}
+        rules:
+            - apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list", "watch"]
     ```
 
 ## Uninstallation
