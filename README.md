@@ -99,6 +99,7 @@ Here are some example use cases for the kubensync operator:
       regex: "test"
     template:
       literal: |
+        ---
         apiVersion: v1
         kind: ServiceAccount
         metadata:
@@ -116,15 +117,15 @@ Here are some example use cases for the kubensync operator:
         regex: "dev-.*"
     template:
         literal: |
-        apiVersion: v1
-        kind: Secret
-        metadata:
-            name: my-pull-secret
-            namespace: {{ .Namespace.Name }}
-        type: kubernetes.io/dockerconfigjson
-        data:
-            .dockerconfigjson: <your pull secret in base64>
-
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+              name: my-pull-secret
+              namespace: {{ .Namespace.Name }}
+          type: kubernetes.io/dockerconfigjson
+          data:
+              .dockerconfigjson: <your pull secret in base64>
     ```
 3. **Setting Up RBAC Rules in Specific Namespaces**:
     ```yaml
@@ -137,15 +138,16 @@ Here are some example use cases for the kubensync operator:
         regex: "(namespace1|namespace2)"
     template:
         literal: |
-        apiVersion: rbac.authorization.k8s.io/v1
-        kind: Role
-        metadata:
-            name: my-role
-            namespace: {{ .Namespace.Name }}
-        rules:
-            - apiGroups: [""]
-            resources: ["pods"]
-            verbs: ["get", "list", "watch"]
+          ---
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+              name: my-role
+              namespace: {{ .Namespace.Name }}
+          rules:
+              - apiGroups: [""]
+              resources: ["pods"]
+              verbs: ["get", "list", "watch"]
     ```
 
 ## Uninstallation
