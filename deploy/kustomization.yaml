@@ -1,0 +1,6 @@
+---
+namespace: kubensync-system
+resources:
+  - ../config/crd
+  - ../config/manager
+  - ../config/rbac
