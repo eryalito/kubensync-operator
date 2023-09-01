@@ -1,80 +1,168 @@
-# operator
-// TODO(user): Add simple overview of use/purpose
+# KubeNSync operator
+Introducing KubeNSync, a Kubernetes operator designed to simplify the creation of repetitive resources within distinct namespaces (but also cluster wide!). Craft resource templates tailored to your needs, and with the flexibility of a namespace selector, effortlessly synchronize chosen resources. Streamline resource management and enhance deployment efficiency using KubeNSync's intuitive approach.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+This Kubernetes Operator, named "kubensync", allows users to automate the creation of Kubernetes resources based on Go templates in specified namespaces. It provides a flexible way to automate tasks such as creating pull secrets, setting up RBAC rules, and installing operators. Users can define a Custom Resource (CR) that contains the template to be rendered and a namespace selector in the form of a regex. The operator will then create and manage the specified resources in the selected namespaces.
 
-## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+## Table of Contents
 
-### Running on the cluster
-1. Install Instances of Custom Resources:
+- [KubeNSync operator](#kubensync-operator)
+  - [Description](#description)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+    - [Using Operator Lifecycle Manager (OLM)](#using-operator-lifecycle-manager-olm)
+    - [Using kustomize](#using-kustomize)
+  - [Usage](#usage)
+    - [Custom Resource Definition](#custom-resource-definition)
+    - [Examples](#examples)
+  - [Uninstallation](#uninstallation)
+    - [Using Operator Lifecycle Manager (OLM)](#using-operator-lifecycle-manager-olm-1)
+    - [Using Kustomize](#using-kustomize-1)
+  - [License](#license)
 
-```sh
-kubectl apply -f config/samples/
+## Prerequisites
+
+Before deploying the kubensync operator, ensure you have the following prerequisites:
+
+- Kubernetes cluster up and running.
+- `kubectl` CLI tool configured to access your cluster.
+- `cluster-admin` privileges.
+- [Operator Lifecycle Manager (OLM)](https://github.com/operator-framework/operator-lifecycle-manager) installed if you want to use the OLM installation method.
+- [Kustomize](https://kustomize.io/) if you want to use the kustomize installation method.
+
+## Installation
+
+### Using Operator Lifecycle Manager (OLM)
+
+1. Import the catalog source:
+    ```bash
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/operator-catalog/main/samples/catalogsource.yml
+    ```
+2. Install the `kubensync` operator from the OperatorHub
+
+### Using kustomize
+
+1. Clone this repo:
+    ```bash
+    git clone https://github.com/eryalito/kubensync.git
+    ```
+2. Change the working directory:
+    ```bash
+    cd kubensync
+    ```
+3. Deploy the operator and its resources:
+    ```bash
+    kubectl apply -k deploy/
+    ```
+
+## Usage
+
+Once the kubensync operator is installed, you can start using it by defining custom resources (CRs) that specify the resources you want to create in selected namespaces.
+
+### Custom Resource Definition
+
+The following is an example of a custom resource (CR) definition:
+
+```yaml
+apiVersion: automation.kubensync.com/v1alpha1
+kind: ManagedResource
+metadata:
+  name: managedresource-sample
+spec:
+  namespaceSelector:
+    regex: "test"
+  template:
+    literal: |
+      ---
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: managed-resource-sa
+        namespace: {{ .Namespace.Name }}
 ```
+- `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces.
+- `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
 
-2. Build and push your image to the location specified by `IMG`:
+### Examples
 
-```sh
-make docker-build docker-push IMG=<some-registry>/operator:tag
-```
+Here are some example use cases for the kubensync operator:
 
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+1. **Creating a ServiceAccount in All Test Namespaces**:
+    ```yaml
+    apiVersion: automation.kubensync.com/v1alpha1
+    kind: ManagedResource
+    metadata:
+    name: serviceaccount-sample
+    spec:
+    namespaceSelector:
+    regex: "test"
+    template:
+    literal: |
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+        name: managed-resource-sa
+        namespace: {{ .Namespace.Name }}
+    ```
+2. **Creating a Pull Secret in All Development Namespaces**:
+    ```yaml
+    apiVersion: automation.kubensync.com/v1alpha1
+    kind: ManagedResource
+    metadata:
+    name: pullsecret-sample
+    spec:
+    namespaceSelector:
+        regex: "dev-.*"
+    template:
+        literal: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+            name: my-pull-secret
+            namespace: {{ .Namespace.Name }}
+        type: kubernetes.io/dockerconfigjson
+        data:
+            .dockerconfigjson: <your pull secret in base64>
 
-```sh
-make deploy IMG=<some-registry>/operator:tag
-```
+    ```
+3. **Setting Up RBAC Rules in Specific Namespaces**:
+    ```yaml
+    apiVersion: automation.kubensync.com/v1alpha1
+    kind: ManagedResource
+    metadata:
+    name: rbac-sample
+    spec:
+    namespaceSelector:
+        regex: "(namespace1|namespace2)"
+    template:
+        literal: |
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+            name: my-role
+            namespace: {{ .Namespace.Name }}
+        rules:
+            - apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list", "watch"]
+    ```
 
-### Uninstall CRDs
-To delete the CRDs from the cluster:
+## Uninstallation
 
-```sh
-make uninstall
-```
+### Using Operator Lifecycle Manager (OLM)
+1. Open the OperatorHub in your cluster.
+2. Find the kubensync operator and click "Uninstall."
 
-### Undeploy controller
-UnDeploy the controller from the cluster:
-
-```sh
-make undeploy
-```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/),
-which provide a reconcile function responsible for synchronizing resources until the desired state is reached on the cluster.
-
-### Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
-
-### Modifying the API definitions
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+### Using Kustomize
+1. Change the working directory:
+    ```bash
+    cd kubensync
+    ```
+2. Delete the kubensync resources:
+    ```bash
+    kubectl delete -k deploy/
+    ```
 
 ## License
 
