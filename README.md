@@ -96,9 +96,9 @@ Here are some example use cases for the kubensync operator:
     name: serviceaccount-sample
     spec:
     namespaceSelector:
-    regex: "test"
+      regex: "test"
     template:
-    literal: |
+      literal: |
         apiVersion: v1
         kind: ServiceAccount
         metadata:
