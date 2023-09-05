@@ -151,11 +151,11 @@ func parseSecretData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, 
 		reconcilerLogger.Error(err, "Error retrieving Secret")
 		return nil, err
 	}
-	secretData := make(map[string]interface{})
+	data := make(map[string]interface{})
 	for key, value := range secret.Data {
-		secretData[key] = string(value)
+		data[key] = string(value)
 	}
-	return secretData, nil
+	return data, nil
 }
 
 func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
@@ -164,9 +164,9 @@ func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clie
 		reconcilerLogger.Error(err, "Error retrieving Secret")
 		return nil, err
 	}
-	secretData := make(map[string]interface{})
+	data := make(map[string]interface{})
 	for key, value := range secret.Data {
-		secretData[key] = string(value)
+		data[key] = string(value)
 	}
-	return secretData, nil
+	return data, nil
 }
