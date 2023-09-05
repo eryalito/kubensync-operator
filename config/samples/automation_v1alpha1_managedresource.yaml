@@ -12,11 +12,25 @@ spec:
   namespaceSelector:
     regex: "test"
   template:
+    data:
+      - name: my_secret
+        type: Secret
+        ref:
+          name: my-secret
+          namespace: default
+      - name: my_cm
+        type: ConfigMap
+        ref:
+          name: my-cm
+          namespace: default
     literal: |
       ---
       apiVersion: v1
       kind: ServiceAccount
       metadata:
+        annotations:
+          secret_value: {{ .Data.my_secret.password }}
+          cm_value: {{ .Data.my_cm.value }}
         name: managed-resource-sa
         namespace: {{ .Namespace.Name }}
 

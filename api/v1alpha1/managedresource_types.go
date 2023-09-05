@@ -20,6 +20,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Defines the reference to the resource that should be imported.
+type ManagedResourceSpecTemplateDataRef struct {
+	// Name of the resource.
+	Name string `json:"name,omitempty"`
+	// Namespace of the resource
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// Defines the kind of resource the ref is pointing to. Could be `Secret` or `ConfigMap`.
+// +enum
+type ManagedResourceSpecTemplateType string
+
+const (
+	// Secret means that the ref points to a secret.
+	Secret ManagedResourceSpecTemplateType = "Secret"
+
+	// ConfigMap means that the ref points to a config map.
+	ConfigMap ManagedResourceSpecTemplateType = "ConfigMap"
+)
+
+// Describes extra data that will be loaded into the go template as inputs. They all will
+// be inside `.Data` parent and all Secret/ConfigMap keys will be loaded. The format inside the template would look as follows
+// `.Data.${Name}.${Key}`.
+type ManagedResourceSpecTemplateData struct {
+	// Name of the key where the contents will be created.
+	Name string                             `json:"name,omitempty"`
+	Type ManagedResourceSpecTemplateType    `json:"type,omitempty"`
+	Ref  ManagedResourceSpecTemplateDataRef `json:"ref,omitempty"`
+}
+
 // ManagedResourceSpecNamespaceSelector defines the selector used to specify which namespaces are affected
 type ManagedResourceSpecNamespaceSelector struct {
 	// Regex that the namespace name must match to be selected
@@ -30,6 +60,9 @@ type ManagedResourceSpecNamespaceSelector struct {
 type ManagedResourceSpecTemplate struct {
 	// Literal defines a go template to be renderized for each namespace matching the selector
 	Literal string `json:"literal,omitempty"`
+
+	// Data defines a set of refences to secrets or configmaps
+	Data []ManagedResourceSpecTemplateData `json:"data,omitempty"`
 }
 
 // ManagedResourceSpec defines the desired state of ManagedResource

@@ -46,7 +46,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		return nil
 	}
 	reconcilerLogger.Info("Reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
-	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template.Literal, namespace)
+	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template, namespace, r.RestConfig)
 	if err != nil {
 		return err
 	}
@@ -95,22 +95,78 @@ func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerRefe
 	}
 }
 
-func renderTemplateForNamespace(tpl string, namespace *corev1.Namespace) (string, error) {
-	tmpl, err := template.New("").Parse(tpl)
+func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
+	tmpl, err := template.New("").Parse(tpl.Literal)
+	if err != nil {
+		return "", err
+	}
+
+	refdata, err := getTemplateData(tpl.Data, config)
 	if err != nil {
 		return "", err
 	}
 
 	data := struct {
 		Namespace corev1.Namespace `json:"namespace"`
+		Data      map[string]interface{}
 	}{
 		Namespace: *namespace.DeepCopy(),
+		Data:      refdata,
 	}
-
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, data)
 	if err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, config *rest.Config) (map[string]interface{}, error) {
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		reconcilerLogger.Error(err, "Error creating Kubernetes client")
+		return nil, err
+	}
+	parsedData := make(map[string]interface{})
+	for _, dataelement := range data {
+		// Retrieve the Secret.
+		var refData map[string]interface{}
+		if dataelement.Type == automationv1alpha1.Secret {
+			refData, err = parseSecretData(dataelement.Ref, clientset)
+		} else if dataelement.Type == automationv1alpha1.ConfigMap {
+			refData, err = parseCMData(dataelement.Ref, clientset)
+		}
+		if err != nil {
+			reconcilerLogger.Error(err, "Error parsing ref")
+			return nil, err
+		}
+		parsedData[dataelement.Name] = refData
+	}
+	return parsedData, nil
+}
+
+func parseSecretData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
+	secret, err := clientset.CoreV1().Secrets(ref.Namespace).Get(context.TODO(), ref.Name, metav1.GetOptions{})
+	if err != nil {
+		reconcilerLogger.Error(err, "Error retrieving Secret")
+		return nil, err
+	}
+	secretData := make(map[string]interface{})
+	for key, value := range secret.Data {
+		secretData[key] = string(value)
+	}
+	return secretData, nil
+}
+
+func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
+	secret, err := clientset.CoreV1().ConfigMaps(ref.Namespace).Get(context.TODO(), ref.Name, metav1.GetOptions{})
+	if err != nil {
+		reconcilerLogger.Error(err, "Error retrieving Secret")
+		return nil, err
+	}
+	secretData := make(map[string]interface{})
+	for key, value := range secret.Data {
+		secretData[key] = string(value)
+	}
+	return secretData, nil
 }
