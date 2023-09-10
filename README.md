@@ -70,6 +70,12 @@ kind: ManagedResource
 metadata:
   name: managedresource-sample
 spec:
+  data:
+    - name: my_secret
+      type: Secret
+      ref:
+        name: my-secret
+        namespace: default
   namespaceSelector:
     regex: "test"
   template:
@@ -77,10 +83,13 @@ spec:
       ---
       apiVersion: v1
       kind: ServiceAccount
+      annotations:
+        secret_value: {{ .Data.my_secret.password }}
       metadata:
         name: managed-resource-sa
         namespace: {{ .Namespace.Name }}
 ```
+- `data`: Optional field that read `Secret` or `ConfigMap` and imports the contents to be used in the `template` under `.Data.<name>`.
 - `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces.
 - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
 
