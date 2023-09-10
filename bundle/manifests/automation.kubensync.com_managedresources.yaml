@@ -46,6 +46,35 @@ spec:
                 description: ManagedResourceSpecTemplate defines the resources to
                   be created when a namespace matches the selector
                 properties:
+                  data:
+                    description: Data defines a set of refences to secrets or configmaps
+                    items:
+                      description: Describes extra data that will be loaded into the
+                        go template as inputs. They all will be inside `.Data` parent
+                        and all Secret/ConfigMap keys will be loaded. The format inside
+                        the template would look as follows `.Data.${Name}.${Key}`.
+                      properties:
+                        name:
+                          description: Name of the key where the contents will be
+                            created.
+                          type: string
+                        ref:
+                          description: Defines the reference to the resource that
+                            should be imported.
+                          properties:
+                            name:
+                              description: Name of the resource.
+                              type: string
+                            namespace:
+                              description: Namespace of the resource
+                              type: string
+                          type: object
+                        type:
+                          description: Defines the kind of resource the ref is pointing
+                            to. Could be `Secret` or `ConfigMap`.
+                          type: string
+                      type: object
+                    type: array
                   literal:
                     description: Literal defines a go template to be renderized for
                       each namespace matching the selector

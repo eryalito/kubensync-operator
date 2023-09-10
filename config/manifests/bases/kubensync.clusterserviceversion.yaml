@@ -40,10 +40,10 @@ spec:
   links:
   - name: Kubensync
     url: https://kubensync.domain
+  maintainers:
+  - email: eryalito@gmail.com
+    name: eryalito
   maturity: alpha
   provider:
     name: eryalito
-  maintainers:
-  - name: eryalito
-    email: eryalito@gmail.com
   version: 0.0.0
