@@ -70,6 +70,7 @@ kind: ManagedResource
 metadata:
   name: managedresource-sample
 spec:
+  avoidResourceUpdate: false
   data:
     - name: my_secret
       type: Secret
@@ -89,6 +90,7 @@ spec:
         name: managed-resource-sa
         namespace: {{ .Namespace.Name }}
 ```
+- `avoidResourceUpdate`: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is `false`.
 - `data`: Optional field that read `Secret` or `ConfigMap` and imports the contents to be used in the `template` under `.Data.<name>`.
 - `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces.
 - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
