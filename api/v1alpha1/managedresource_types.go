@@ -67,8 +67,10 @@ type ManagedResourceSpecTemplate struct {
 
 // ManagedResourceSpec defines the desired state of ManagedResource
 type ManagedResourceSpec struct {
-	NamespaceSelector ManagedResourceSpecNamespaceSelector `json:"namespaceSelector,omitempty"`
-	Template          ManagedResourceSpecTemplate          `json:"template,omitempty"`
+	// AvoidResourceUpdate defines if the created resources should be updated if they already exists. Default value is false.
+	AvoidResourceUpdate bool                                 `json:"avoidResourceUpdate,omitempty"`
+	NamespaceSelector   ManagedResourceSpecNamespaceSelector `json:"namespaceSelector,omitempty"`
+	Template            ManagedResourceSpecTemplate          `json:"template,omitempty"`
 }
 
 // ManagedResourceStatus defines the observed state of ManagedResource
