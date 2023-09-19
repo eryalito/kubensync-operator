@@ -8,6 +8,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
 	"github.com/kubensync/operator/pkg/kube"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +107,7 @@ func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerRefe
 }
 
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
-	tmpl, err := template.New("").Parse(tpl.Literal)
+	tmpl, err := template.New("").Funcs(sprig.FuncMap()).Parse(tpl.Literal)
 	if err != nil {
 		return "", err
 	}
