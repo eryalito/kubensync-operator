@@ -34,6 +34,10 @@ spec:
           spec:
             description: ManagedResourceSpec defines the desired state of ManagedResource
             properties:
+              avoidResourceUpdate:
+                description: AvoidResourceUpdate defines if the created resources
+                  should be updated if they already exists. Default value is false.
+                type: boolean
               namespaceSelector:
                 description: ManagedResourceSpecNamespaceSelector defines the selector
                   used to specify which namespaces are affected
