@@ -28,7 +28,7 @@ metadata:
     name: pullsecret-sample
 spec:
     namespaceSelector:
-        regex: "dev-.*"
+        regex: "^dev-.*"
     template:
         literal: |
             ---
@@ -50,11 +50,10 @@ This MR will create a Secret `my-pull-secret` in each namespace that contains `d
     apiVersion: automation.kubensync.com/v1alpha1
     kind: ManagedResource
     metadata:
-        name: managedresource-sample
+        name: pullsecret-sample
     spec:
-        avoidResourceUpdate: false
         namespaceSelector:
-            regex: "test"
+            regex: "^dev-.*"
         template:
             data:
             - name: pull_secret
@@ -82,7 +81,7 @@ metadata:
     name: rbac-sample
 spec:
     namespaceSelector:
-        regex: "(namespace1|namespace2)"
+        regex: "^(namespace1|namespace2)$"
     template:
         literal: |
             ---
@@ -93,6 +92,36 @@ spec:
                 namespace: {{ .Namespace.Name }}
             rules:
                 - apiGroups: [""]
-                resources: ["pods"]
-                verbs: ["get", "list", "watch"]
+                  resources: ["pods"]
+                  verbs: ["get", "list", "watch"]
 ```
+This MR will create a Role `my-role` in each namespace that contains `namespace1` o `namespace2` in its name that contains the credentials to connect to your internal registry.
+
+## Create default quotas on all non core namespaces
+``` { .yaml }
+apiVersion: automation.kubensync.com/v1alpha1
+kind: ManagedResource
+metadata:
+    name: default-quotas
+spec:
+    avoidResourceUpdate: true
+    namespaceSelector:
+        regex: "^[^k].*|k[^u].*|ku[^b].*" # (1)!
+    template:
+        literal: |
+            ---
+            apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+                name: cpu-quota
+                namespace: {{ .Namespace.Name }}
+            spec:
+                hard:
+                    cpu: "4"
+```
+
+1.  !!! warning
+    As Go regex stdlib does not support negative lookaheads the negative expressions is a bit funny. It would be `^(?!kube-).*`, meaning everything that does not start by `kube-`.
+    
+This MR will create a ResourceQuota `cpu-quota` in each namespace that not start with `kube-` with cpu hard value of `4`, but it will not be resynced unless it's deleted, so the quota can be edited by other means and it won't be restored to the default `4`. 
+

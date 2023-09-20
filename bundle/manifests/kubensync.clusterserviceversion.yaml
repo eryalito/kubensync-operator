@@ -4,10 +4,10 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    createdAt: "2023-09-10T20:37:22Z"
+    createdAt: "2023-09-19T22:22:31Z"
     operators.operatorframework.io/builder: operator-sdk-v1.28.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: kubensync.v0.0.2
+  name: kubensync.v0.0.3
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -143,7 +143,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: ghcr.io/eryalito/kubensync-operator:v0.0.2
+                image: ghcr.io/eryalito/kubensync-operator:v0.0.3
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -230,4 +230,4 @@ spec:
   maturity: alpha
   provider:
     name: eryalito
-  version: 0.0.2
+  version: 0.0.3

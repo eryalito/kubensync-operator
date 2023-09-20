@@ -11,6 +11,11 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 ## Installation
 
+!!! warning "Default SA permissions"
+    After installing the operator, the operator service account does not have permissions to create resources by default. Therefore, you need to define and grant the necessary permissions manually. This allows you to specify the minimum permission level required for the operator to create objects.
+
+    The reason for this is that the template is rendered at runtime, so it is not possible to determine the required permissions for each specific scenario before installing the operator.
+
 ### Using Operator Lifecycle Manager (OLM)
 
 1. Import the catalog source:
@@ -23,11 +28,11 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 1. Clone this repo:
     ```{ .bash } 
-    git clone https://github.com/eryalito/kubensync.git
+    git clone https://github.com/eryalito/kubensync-operator.git
     ```
 2. Change the working directory:
     ``` { .bash }
-    cd kubensync
+    cd kubensync-operator
     ```
 3. Deploy the operator and its resources:
     ``` { .bash }
@@ -43,7 +48,7 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 ### Using kubectl / kustomize
 1. Change the working directory:
     ``` { .bash }
-    cd kubensync
+    cd kubensync-operator
     ```
 2. Delete the kubensync resources:
     ``` { .bash }
