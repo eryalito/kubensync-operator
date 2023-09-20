@@ -23,11 +23,11 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 1. Clone this repo:
     ```{ .bash } 
-    git clone https://github.com/eryalito/kubensync.git
+    git clone https://github.com/eryalito/kubensync-operator.git
     ```
 2. Change the working directory:
     ``` { .bash }
-    cd kubensync
+    cd kubensync-operator
     ```
 3. Deploy the operator and its resources:
     ``` { .bash }
@@ -43,7 +43,7 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 ### Using kubectl / kustomize
 1. Change the working directory:
     ``` { .bash }
-    cd kubensync
+    cd kubensync-operator
     ```
 2. Delete the kubensync resources:
     ``` { .bash }
