@@ -509,6 +509,11 @@
 <li><a href="https://github.com/operator-framework/operator-lifecycle-manager">Operator Lifecycle Manager (OLM)</a> installed if you want to use the OLM installation method.</li>
 </ul>
 <h2 id="installation">Installation</h2>
+<div class="admonition warning">
+<p class="admonition-title">Default SA permissions</p>
+<p>After installing the operator, the operator service account does not have permissions to create resources by default. Therefore, you need to define and grant the necessary permissions manually. This allows you to specify the minimum permission level required for the operator to create objects.</p>
+<p>The reason for this is that the template is rendered at runtime, so it is not possible to determine the required permissions for each specific scenario before installing the operator.</p>
+</div>
 <h3 id="using-operator-lifecycle-manager-olm">Using Operator Lifecycle Manager (OLM)</h3>
 <ol>
 <li>Import the catalog source:
@@ -519,10 +524,10 @@
 <h3 id="using-kubectl-kustomize">Using kubectl / kustomize</h3>
 <ol>
 <li>Clone this repo:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/eryalito/kubensync.git
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/eryalito/kubensync-operator.git
 </span></code></pre></div></li>
 <li>Change the working directory:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>kubensync
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>kubensync-operator
 </span></code></pre></div></li>
 <li>Deploy the operator and its resources:
     <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-k<span class="w"> </span>deploy/
@@ -537,7 +542,7 @@
 <h3 id="using-kubectl-kustomize_1">Using kubectl / kustomize</h3>
 <ol>
 <li>Change the working directory:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>kubensync
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>kubensync-operator
 </span></code></pre></div></li>
 <li>Delete the kubensync resources:
     <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-k<span class="w"> </span>deploy/
