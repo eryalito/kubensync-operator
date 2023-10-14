@@ -27,10 +27,10 @@ jobs:
       - name: Update version & variables
         run: |
           TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
-          sed -i "s/CHANGE_ME_VERSION/${TAG}/" config/manager/kustomization.yaml
-          sed -i "s/CHANGE_ME_VERSION/${TAG}/" Makefile
-          sed -i "s/CHANGE_ME_IMAGE/ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}" config/manager/kustomization.yaml
-          sed -i "s/CHANGE_ME_IMAGE/ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}" Makefile
+          sed -i "s|CHANGE_ME_VERSION|${TAG}|" config/manager/kustomization.yaml
+          sed -i "s|CHANGE_ME_VERSION|${TAG}|" Makefile
+          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}|" config/manager/kustomization.yaml
+          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}|" Makefile
 
       - name: Generate manifests
         run: make bundle
