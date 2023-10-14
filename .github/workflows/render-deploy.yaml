@@ -1,0 +1,43 @@
+name: Render and Upload
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  render-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Update version & variables
+        run: |
+          TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
+          sed -i "s|CHANGE_ME_VERSION|${TAG}|" config/manager/kustomization.yaml
+          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
+
+      - name: Render manifests
+        run: kustomize build deploy/ > /tmp/manifests.yaml
+
+      - name: GIT update, commit and push
+        env: 
+          CI_COMMIT_MESSAGE: Continuous Integration Build Artifacts
+          CI_COMMIT_AUTHOR: Continuous Integration
+        run: |
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "username@users.noreply.github.com"
+          git fetch
+          git reset --hard
+          git checkout master
+          cp /tmp/manifests.yaml render/manifests.yaml
+          git add render/manifests.yaml
+          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          git push
