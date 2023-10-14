@@ -44,8 +44,8 @@ jobs:
 
       - name: Build operator
         run: |
-          make docker-build docker-push
+          make docker-build
 
       - name: Build bundle
         run: |
-          make bundle-build bundle-push
+          make bundle-build
