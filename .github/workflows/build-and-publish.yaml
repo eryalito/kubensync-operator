@@ -48,6 +48,8 @@ jobs:
 
       - name: Test bundle
         run: |
+          docker ps
+          docker images
           TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
           operator-sdk bundle validate ghcr.io/${{ github.repository }}:${TAG}
 
