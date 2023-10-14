@@ -42,10 +42,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build bundle
+        run: |
+          make bundle-build 
+
+      - name: Test bundle
+        run: |
+          TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
+          operator-sdk bundle validate ghcr.io/${{ github.repository }}:${TAG}
+
+      - name: push bundle
+        run: |
+          make bundle-push
+
       - name: Build operator
         run: |
           make docker-build docker-push
-
-      - name: Build bundle
-        run: |
-          make bundle-build bundle-push
