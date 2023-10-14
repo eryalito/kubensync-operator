@@ -27,10 +27,14 @@ jobs:
       - name: Render manifests
         run: kustomize build deploy/ > render/manifests.yaml
 
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Render manifests for tag ${{ steps.read-tag.outputs.tag }}"
-          branch: test-branch
-          files: |
-            render/manifests.yaml
+      - name: GIT commit and push
+        env: 
+          CI_COMMIT_MESSAGE: Continuous Integration Build Artifacts
+          CI_COMMIT_AUTHOR: Continuous Integration
+        run: |
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "username@users.noreply.github.com"
+          git chechout master
+          git add render/manifests.yaml
+          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          git push
