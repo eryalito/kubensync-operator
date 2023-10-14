@@ -1,0 +1,51 @@
+name: Build and Publish Operator
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.20'
+
+      - name: Install Operator SDK
+        run: |
+          curl -LO https://github.com/operator-framework/operator-sdk/releases/download/v1.28.0/operator-sdk_linux_amd64
+          chmod +x operator-sdk_linux_amd64
+          sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
+
+      - name: Update version & variables
+        run: |
+          TAG=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
+          sed -i "s/CHANGE_ME_VERSION/${TAG}/" config/manager/kustomization.yaml
+          sed -i "s/CHANGE_ME_VERSION/${TAG}/" Makefile
+          sed -i "s/CHANGE_ME_IMAGE/ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}" config/manager/kustomization.yaml
+          sed -i "s/CHANGE_ME_IMAGE/ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}" Makefile
+
+      - name: Generate manifests
+        run: make bundle
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build operator
+        run: |
+          make docker-build docker-push
+
+      - name: Build bundle
+        run: |
+          make bundle-build bundle-push
