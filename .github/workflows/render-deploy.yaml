@@ -31,7 +31,6 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "Render manifests for tag ${{ steps.read-tag.outputs.tag }}"
-          commit_options: "--author='GitHub Actions <actions@github.com>'"
           branch: ${{ steps.read-tag.outputs.tag }}
           files: |
             render/manifests.yaml
