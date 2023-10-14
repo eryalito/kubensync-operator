@@ -51,7 +51,7 @@ jobs:
           docker ps
           docker images
           TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
-          operator-sdk bundle validate ghcr.io/${{ github.repository }}:v${TAG}
+          operator-sdk bundle validate ghcr.io/${{ github.repository }}-bundle:v${TAG}
 
       - name: push bundle
         run: |
