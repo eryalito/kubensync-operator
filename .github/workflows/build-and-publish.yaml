@@ -44,18 +44,12 @@ jobs:
 
       - name: Build bundle
         run: |
-          make bundle-build 
+          make bundle-build bundle-push
 
       - name: Test bundle
         run: |
-          docker ps
-          docker images
           TAG=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
           operator-sdk bundle validate ghcr.io/${{ github.repository }}-bundle:v${TAG}
-
-      - name: push bundle
-        run: |
-          make bundle-push
 
       - name: Build operator
         run: |
