@@ -26,18 +26,17 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 ### Using kubectl / kustomize
 
-1. Clone this repo:
+1. Install the operator:
     ```{ .bash } 
-    git clone https://github.com/eryalito/kubensync-operator.git
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
     ```
-2. Change the working directory:
+2. Grant Permissions: 
     ``` { .bash }
-    cd kubensync-operator
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
     ```
-3. Deploy the operator and its resources:
-    ``` { .bash }
-    kubectl apply -k deploy/
-    ```
+
+    !!! warning Cluster-admin permissions
+        This permissions will grant the operator cluster-admin permissions. It's a good way of testing the operator, but specific permissions should be defined acording to the resources it will manage in each specific case.
 
 ## Uninstallation
 
@@ -46,11 +45,12 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 2. Find the kubensync operator and click "Uninstall."
 
 ### Using kubectl / kustomize
-1. Change the working directory:
-    ``` { .bash }
-    cd kubensync-operator
+
+1. Delete the operator:
+    ```{ .bash } 
+    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
     ```
-2. Delete the kubensync resources:
+2. Delete Permissions: 
     ``` { .bash }
-    kubectl delete -k deploy/
+    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
     ```
