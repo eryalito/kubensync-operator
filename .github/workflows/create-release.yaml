@@ -112,4 +112,4 @@ jobs:
     with:
       version: ${{ github.event.inputs.version }}
     secrets:
-      repo_creds: ${{ secrets.GITHUB_TOKEN }}
+      repo_creds: ${{ secrets.GHCR_TOKEN }}
