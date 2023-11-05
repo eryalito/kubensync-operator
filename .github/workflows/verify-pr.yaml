@@ -7,7 +7,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-
+    if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
     steps:
       - name: Checkout code
         uses: actions/checkout@v2

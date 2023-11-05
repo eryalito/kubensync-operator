@@ -8,14 +8,12 @@ on:
         required: true
 
 jobs:
-  create-release:
+  create_release_pr:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          ref: 'master'
 
       - name: Validate version
         run: |
@@ -23,6 +21,7 @@ jobs:
 
       - name: Check if tag exists
         run: |
+          git fetch --tags
           if git rev-parse "v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
             echo "Tag already exists"
             exit 1
@@ -55,29 +54,34 @@ jobs:
           git config --local commit.gpgsign true
           git config --local user.signingkey $(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
 
-      - name: Commit and push
-        run: |
-          git add render/manifests.yaml
-          git commit -m "Update version to ${{ github.event.inputs.version }}"
-          git push
-
-      - name: Create tag
-        run: |
-          git tag v${{ github.event.inputs.version }}
-          git push origin v${{ github.event.inputs.version }}
-
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        id: cpr
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          release_name: Release v${{ github.event.inputs.version }}
-          draft: false
-          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Update version to ${{ github.event.inputs.version }}
+          body: Update version to ${{ github.event.inputs.version }}
+          commit-message: Update version to ${{ github.event.inputs.version }}
+          author: Eryalito Bot <eryalitobot@gmail.com>
+          committer: Eryalito Bot <eryalitobot@gmail.com>
+          add-paths: render/manifests.yaml
+          delete-branch: true
+          labels: 'skip-ci'
 
-  call-workflow:  
-    needs: create-release
+    outputs:
+      pr_number: ${{ steps.cpr.outputs.pull-request-number }}
+
+  merge_pr:  
+    needs: create_release_pr
+    uses: ./.github/workflows/automerge-release-pr.yaml
+    with:
+      version: ${{ github.event.inputs.version }}
+      pr_number: ${{ needs.create_release_pr.outputs.pr_number }}
+    secrets:
+      repo_creds: ${{ secrets.GITHUB_TOKEN }}
+
+  build_and_publish:  
+    needs: [create_release_pr, merge_pr]
     uses: ./.github/workflows/build-and-publish.yaml
     with:
       version: ${{ github.event.inputs.version }}
