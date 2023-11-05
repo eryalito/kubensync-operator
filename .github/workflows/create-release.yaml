@@ -97,14 +97,11 @@ jobs:
           git push origin v${{ inputs.version }}
 
       - name: Create GitHub release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          release_name: Release v${{ github.event.inputs.version }}
-          draft: false
-          prerelease: false
+          generateReleaseNotes: true
+          tag: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
 
   build_and_publish:  
     needs: tag_and_release
