@@ -47,4 +47,5 @@ spec:
                 namespace: {{ .Namespace.Name }}
 EOF
 ```
+
 For more examples check out [the docs](https://docs.kubensync.com/examples/)
