@@ -54,6 +54,14 @@ jobs:
           git config --local commit.gpgsign true
           git config --local user.signingkey $(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
 
+      # - name: Commit and push
+      #   run: |
+      #     git switch -c release-${{ github.event.inputs.version }}
+      #     git status
+      #     git add render/manifests.yaml
+      #     git commit -m "Update version to ${{ github.event.inputs.version }}"
+      #     git push -u origin release-${{ github.event.inputs.version }}
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         id: cpr
