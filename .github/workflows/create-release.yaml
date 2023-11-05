@@ -79,9 +79,35 @@ jobs:
       pr_number: ${{ needs.create_release_pr.outputs.pr_number }}
     secrets:
       repo_creds: ${{ secrets.GITHUB_TOKEN }}
+      pat_creds: ${{ secrets.PAT_GITHUB }}
+
+  tag_and_release:
+    runs-on: ubuntu-latest
+    needs: merge_pr
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: master
+
+      - name: Tag commit
+        run: |
+          git tag v${{ inputs.version }}
+          git push origin v${{ inputs.version }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          release_name: Release v${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
 
   build_and_publish:  
-    needs: [create_release_pr, merge_pr]
+    needs: tag_and_release
     uses: ./.github/workflows/build-and-publish.yaml
     with:
       version: ${{ github.event.inputs.version }}

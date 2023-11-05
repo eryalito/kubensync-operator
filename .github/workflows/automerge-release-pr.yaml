@@ -12,6 +12,8 @@ on:
     secrets:
       repo_creds:
         required: true
+      pat_creds:
+        required: true
 
 jobs:
   automerge:
@@ -22,23 +24,6 @@ jobs:
 
       - name: Automerge PR
         run: |
-          curl -X PUT -H 'Authorization: token ${{ secrets.repo_creds }}' \
-          -H 'Accept: application/vnd.github.v3+json' \
-          https://api.github.com/repos/${{ github.repository }}/pulls/${{ inputs.pr_number }}/merge
-
-      - name: Tag commit
-        run: |
-          git fetch origin master
-          git checkout master
-          git tag v${{ inputs.version }}
-          git push origin v${{ inputs.version }}
-
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ github.event.inputs.version }}
-          release_name: Release v${{ github.event.inputs.version }}
-          draft: false
-          prerelease: false
+          echo ${{ secrets.pat_creds }} | gh auth login --with-token
+          gh pr review ${{ inputs.pr_number }} --approve
+          gh pr merge ${{ inputs.pr_number }} --auto --squash
