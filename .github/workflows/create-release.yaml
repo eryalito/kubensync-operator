@@ -1,0 +1,68 @@
+name: Create new release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'     
+        required: true
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: 'master'
+
+      - name: Validate version
+        run: |
+          echo "${{ github.event.inputs.version }}" | grep -q -P '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$' || exit 1
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+            echo "Tag already exists"
+            exit 1
+          fi
+
+      - name: Replace values
+        run: |
+          sed -i "s|CHANGE_ME_VERSION|${{ github.event.inputs.version }}|" config/manager/kustomization.yaml
+          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
+
+      - name: Render manifests
+        run: kustomize build deploy/ > render/manifests.yaml
+
+      - name: Commit and push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add render/manifests.yaml
+          git commit -m "Update version to ${{ github.event.inputs.version }}"
+          git push
+
+      - name: Create tag
+        run: |
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          release_name: Release v${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+
+  call-workflow:  
+    needs: create-release
+    uses: ./.github/workflows/build-and-publish.yaml
+    with:
+      version: ${{ github.event.inputs.version }}
+    secrets:
+      repo_creds: ${{ secrets.GITHUB_TOKEN }}
