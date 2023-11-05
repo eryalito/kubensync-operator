@@ -36,10 +36,27 @@ jobs:
       - name: Render manifests
         run: kustomize build deploy/ > render/manifests.yaml
 
+      - name: Configure git
+        run: |
+          git config --local user.email "eryalitobot@gmail.com"
+          git config --local user.name "Eryalito Bot"
+          echo "${{ secrets.SSH_GITHUB }}" > /tmp/id_rsa
+          chmod 600  /tmp/id_rsa
+          git config core.sshCommand 'ssh -i  /tmp/id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+
+      - name: Import GPG key
+        id: import-gpg
+        run: |
+          echo "${{ secrets.GPG_SIGN_64 }}" | base64 --decode | gpg --import
+          gpg --list-secret-keys --keyid-format LONG
+
+      - name: Configure GPG
+        run: |
+          git config --local commit.gpgsign true
+          git config --local user.signingkey $(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+
       - name: Commit and push
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
           git add render/manifests.yaml
           git commit -m "Update version to ${{ github.event.inputs.version }}"
           git push
