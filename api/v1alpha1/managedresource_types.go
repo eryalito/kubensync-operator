@@ -73,10 +73,17 @@ type ManagedResourceSpec struct {
 	Template            ManagedResourceSpecTemplate          `json:"template,omitempty"`
 }
 
+type CreatedResource struct {
+	ApiVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	UID        string `json:"uid,omitempty"`
+}
+
 // ManagedResourceStatus defines the observed state of ManagedResource
 type ManagedResourceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	CreatedResources []CreatedResource `json:"createdResources,omitempty"`
 }
 
 //+kubebuilder:object:root=true

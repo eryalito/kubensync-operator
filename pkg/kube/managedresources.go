@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
@@ -38,6 +39,28 @@ func GetManagedResources(ctx context.Context) (automationv1alpha1.ManagedResourc
 	err = client.Get().Resource("managedresources").Do(ctx).Into(&list)
 
 	return list, err
+}
+
+func UpdateStatus(mr *automationv1alpha1.ManagedResource, ctx context.Context) error {
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Create a new client to interact with the Custom Resource
+	c, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		return err
+	}
+
+	// Update the status
+	err = c.Status().Update(ctx, mr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getMRDefClient() (*rest.RESTClient, error) {

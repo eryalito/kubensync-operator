@@ -34,25 +34,26 @@ var (
 	reconcilerLoggerDebug = ctrl.Log.WithName("reconciler").V((1))
 )
 
-func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) error {
+func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (*automationv1alpha1.ManagedResource, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
-
+	newMRDef := mrDef.DeepCopy()
 	r.ownerRefs = mrOwnerRefs(mrDef)
 
 	regex, err := regexp.Compile(mrDef.Spec.NamespaceSelector.Regex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !regex.MatchString(namespace.Name) {
-		return nil
+		return newMRDef, nil
 	}
 	reconcilerLogger.Info("Reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
 	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template, namespace, r.RestConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	manifestList := strings.Split(manifests, "---")
+	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
 	for _, manifest := range manifestList {
 		if len(manifest) == 0 {
 			continue
@@ -67,7 +68,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		metadata := obj.Object["metadata"].(map[string]interface{})
@@ -75,25 +76,41 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		getObj, err := ri.Get(ctx, obj.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if !errors.IsNotFound(err) {
-				return err
+				return nil, err
 			}
 		}
+		uid := ""
+		if getObj != nil {
+			uid = string(getObj.GetUID())
+		}
+
 		if getObj == nil {
 			reconcilerLoggerDebug.Info("Creating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName())
-			_, err = ri.Create(ctx, obj, metav1.CreateOptions{})
+			uns, err := ri.Create(ctx, obj, metav1.CreateOptions{})
 			if err != nil {
-				return err
+				return nil, err
 			}
+			uid = string(uns.GetUID())
 		} else if !mrDef.Spec.AvoidResourceUpdate {
 			reconcilerLoggerDebug.Info("Updating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName())
 			_, err = ri.Update(ctx, obj, metav1.UpdateOptions{})
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
+		createdObject := automationv1alpha1.CreatedResource{
+			ApiVersion: obj.GetAPIVersion(),
+			Kind:       obj.GetKind(),
+			Name:       obj.GetName(),
+			Namespace:  obj.GetNamespace(),
+			UID:        uid,
+		}
+		createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, createdObject)
 	}
+	newMRDef.Status.CreatedResources = createdAndUpdatedResourcesList
+
 	reconcilerLogger.Info("End reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
-	return nil
+	return newMRDef, nil
 }
 
 func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerReference {

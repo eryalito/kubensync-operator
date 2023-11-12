@@ -89,7 +89,11 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 	}
 
 	for _, nsDef := range nsList.Items {
-		err = rdr.ReconcileNamespaceChange(ctx, managedresource, &nsDef)
+		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, managedresource, &nsDef)
+		if err != nil {
+			return err
+		}
+		err = kube.UpdateStatus(newMRDef, ctx)
 		if err != nil {
 			return err
 		}

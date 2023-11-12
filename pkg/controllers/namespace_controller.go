@@ -73,7 +73,11 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 	}
 
 	for _, mrDef := range mrDefList.Items {
-		err = rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
+		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
+		if err != nil {
+			return err
+		}
+		err = kube.UpdateStatus(newMRDef, ctx)
 		if err != nil {
 			return err
 		}
