@@ -53,6 +53,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		return nil, err
 	}
 	manifestList := strings.Split(manifests, "---")
+	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
 	for _, manifest := range manifestList {
 		if len(manifest) == 0 {
@@ -85,14 +86,14 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		}
 
 		if getObj == nil {
-			reconcilerLoggerDebug.Info("Creating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName())
+			reconcilerLoggerDebug.Info("Creating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
 			uns, err := ri.Create(ctx, obj, metav1.CreateOptions{})
 			if err != nil {
 				return nil, err
 			}
 			uid = string(uns.GetUID())
 		} else if !mrDef.Spec.AvoidResourceUpdate {
-			reconcilerLoggerDebug.Info("Updating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName())
+			reconcilerLoggerDebug.Info("Updating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
 			_, err = ri.Update(ctx, obj, metav1.UpdateOptions{})
 			if err != nil {
 				return nil, err
@@ -106,7 +107,37 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			UID:        uid,
 		}
 		createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, createdObject)
+
+		// remove created resource from the list of previously created resources, so we can delete the ones that are not needed anymore
+		for i, prevResource := range remainingPrevCreatedResources {
+			// If both resources are cluster-scoped
+			if prevResource.Namespace == "" && createdObject.Namespace == "" && prevResource.Name == createdObject.Name && prevResource.ApiVersion == createdObject.ApiVersion && prevResource.Kind == createdObject.Kind {
+				remainingPrevCreatedResources = append(remainingPrevCreatedResources[:i], remainingPrevCreatedResources[i+1:]...)
+				break
+			}
+			// If both resources are namespace-scoped
+			if prevResource.Namespace != "" && createdObject.Namespace != "" && prevResource.Name == createdObject.Name && prevResource.Namespace == createdObject.Namespace && prevResource.ApiVersion == createdObject.ApiVersion && prevResource.Kind == createdObject.Kind {
+				remainingPrevCreatedResources = append(remainingPrevCreatedResources[:i], remainingPrevCreatedResources[i+1:]...)
+				break
+			}
+		}
 	}
+
+	// Delete the remaining resources that were created in the previous reconciliation but are not needed anymore
+	for _, resource := range remainingPrevCreatedResources {
+		obj := &unstructured.Unstructured{}
+		obj.SetAPIVersion(resource.ApiVersion)
+		obj.SetKind(resource.Kind)
+		obj.SetName(resource.Name)
+		obj.SetNamespace(resource.Namespace)
+		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
+		if err != nil {
+			return nil, err
+		}
+		reconcilerLoggerDebug.Info("Deleting resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
+		ri.Delete(ctx, resource.Name, metav1.DeleteOptions{})
+	}
+
 	newMRDef.Status.CreatedResources = createdAndUpdatedResourcesList
 
 	reconcilerLogger.Info("End reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
