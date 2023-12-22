@@ -29,6 +29,7 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
+    needs: verify
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -39,6 +40,12 @@ jobs:
           sed -i "s|CHANGE_ME_VERSION|e2e-test|" Makefile
           sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
           sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" Makefile
+
+      - name: Install Operator SDK
+        run: |
+          curl -LO https://github.com/operator-framework/operator-sdk/releases/download/v1.28.0/operator-sdk_linux_amd64
+          chmod +x operator-sdk_linux_amd64
+          sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
 
       - name: Generate manifests
         run: make bundle
