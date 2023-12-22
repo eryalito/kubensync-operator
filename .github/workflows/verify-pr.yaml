@@ -36,8 +36,8 @@ jobs:
 
       - name: Update version & variables
         run: |
-          sed -i "s|CHANGE_ME_VERSION|e2e-test|" config/manager/kustomization.yaml
-          sed -i "s|CHANGE_ME_VERSION|e2e-test|" Makefile
+          sed -i "s|CHANGE_ME_VERSION|0.0.0-e2e-test|" config/manager/kustomization.yaml
+          sed -i "s|CHANGE_ME_VERSION|0.0.0-e2e-test|" Makefile
           sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
           sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" Makefile
 
@@ -59,4 +59,4 @@ jobs:
 
       - name: Load operator image into Kind Cluster
         run: |
-          kind load docker-image ghcr.io/${{ github.repository }}:e2e-test
+          kind load docker-image ghcr.io/${{ github.repository }}:v0.0.0-e2e-test
