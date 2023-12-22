@@ -25,3 +25,31 @@ jobs:
 
       - name: Build code
         run: make build
+
+    e2e-test:
+      runs-on: ubuntu-latest
+      if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+
+        - name: Update version & variables
+          run: |
+            sed -i "s|CHANGE_ME_VERSION|e2e-test|" config/manager/kustomization.yaml
+            sed -i "s|CHANGE_ME_VERSION|e2e-test|" Makefile
+            sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
+            sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" Makefile
+
+        - name: Generate manifests
+          run: make bundle
+
+        - name: Build operator
+          run: |
+            make docker-build
+
+        - name: Create k8s Kind Cluster
+          uses: helm/kind-action@v1.5.0
+
+        - name: Load operator image into Kind Cluster
+          run: |
+            kind load docker-image ghcr.io/${{ github.repository }}:e2e-test
