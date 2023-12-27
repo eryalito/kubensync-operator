@@ -74,11 +74,12 @@ type ManagedResourceSpec struct {
 }
 
 type CreatedResource struct {
-	ApiVersion string `json:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
-	UID        string `json:"uid,omitempty"`
+	ApiVersion       string `json:"apiVersion,omitempty"`
+	Kind             string `json:"kind,omitempty"`
+	Name             string `json:"name,omitempty"`
+	Namespace        string `json:"namespace,omitempty"`
+	UID              string `json:"uid,omitempty"`
+	TriggerNamespace string `json:"triggerNamespace,omitempty"`
 }
 
 // ManagedResourceStatus defines the observed state of ManagedResource

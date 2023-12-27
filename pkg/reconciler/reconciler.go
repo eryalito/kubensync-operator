@@ -29,14 +29,12 @@ type Reconciler struct {
 }
 
 var (
-	mutex                 = sync.Mutex{}
+	Mutex                 = sync.Mutex{}
 	reconcilerLogger      = ctrl.Log.WithName("reconciler")
 	reconcilerLoggerDebug = ctrl.Log.WithName("reconciler").V((1))
 )
 
 func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (*automationv1alpha1.ManagedResource, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
 	newMRDef := mrDef.DeepCopy()
 	r.ownerRefs = mrOwnerRefs(mrDef)
 
@@ -100,11 +98,12 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			}
 		}
 		createdObject := automationv1alpha1.CreatedResource{
-			ApiVersion: obj.GetAPIVersion(),
-			Kind:       obj.GetKind(),
-			Name:       obj.GetName(),
-			Namespace:  obj.GetNamespace(),
-			UID:        uid,
+			ApiVersion:       obj.GetAPIVersion(),
+			Kind:             obj.GetKind(),
+			Name:             obj.GetName(),
+			Namespace:        obj.GetNamespace(),
+			UID:              uid,
+			TriggerNamespace: namespace.Name,
 		}
 		createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, createdObject)
 
@@ -125,6 +124,11 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 	// Delete the remaining resources that were created in the previous reconciliation but are not needed anymore
 	for _, resource := range remainingPrevCreatedResources {
+		// The trigger namespace should be the same, if not, just skip it and keep it as created
+		if resource.TriggerNamespace != namespace.Name {
+			createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, resource)
+			continue
+		}
 		obj := &unstructured.Unstructured{}
 		obj.SetAPIVersion(resource.ApiVersion)
 		obj.SetKind(resource.Kind)
