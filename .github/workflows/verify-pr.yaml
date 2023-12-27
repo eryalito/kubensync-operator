@@ -62,3 +62,7 @@ jobs:
       - name: Load operator image into Kind Cluster
         run: |
           kind load docker-image --name e2e-test ghcr.io/${{ github.repository }}:v0.0.0-e2e-test
+
+      - name: Run e2e tests
+        run: |
+          /bin/bash e2e/pre.sh && /bin/bash e2e/test.sh && /bin/bash e2e/post.sh
