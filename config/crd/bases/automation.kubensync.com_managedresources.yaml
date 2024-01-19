@@ -88,6 +88,24 @@ spec:
             type: object
           status:
             description: ManagedResourceStatus defines the observed state of ManagedResource
+            properties:
+              createdResources:
+                items:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    triggerNamespace:
+                      type: string
+                    uid:
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true

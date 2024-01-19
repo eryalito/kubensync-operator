@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"log"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,15 +84,29 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 		return err
 	}
 
+	reconciler.Mutex.Lock()
+	defer reconciler.Mutex.Unlock()
 	nsList, err = kube.GetNamespaces(ctx, config)
 	if err != nil {
 		return err
 	}
 
 	for _, nsDef := range nsList.Items {
-		err = rdr.ReconcileNamespaceChange(ctx, managedresource, &nsDef)
+		MRDef, err := kube.GetManagedResource(ctx, managedresource.GetName())
 		if err != nil {
 			return err
+		}
+		originalMRDef := MRDef.DeepCopy()
+		MRDef, err = rdr.ReconcileNamespaceChange(ctx, MRDef, &nsDef)
+		if err != nil {
+			return err
+		}
+		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, MRDef.Status) {
+			log.Printf("Updating status for %s", MRDef.Name)
+			err = kube.UpdateStatus(MRDef, ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

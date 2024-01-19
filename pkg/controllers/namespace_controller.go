@@ -4,6 +4,7 @@ import (
 	// Import necessary packages
 
 	"context"
+	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -67,15 +68,25 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 		return err
 	}
 
+	reconciler.Mutex.Lock()
+	defer reconciler.Mutex.Unlock()
 	mrDefList, err = kube.GetManagedResources(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, mrDef := range mrDefList.Items {
-		err = rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
+		originalMRDef := mrDef.DeepCopy()
+		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
 		if err != nil {
 			return err
+		}
+		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
+			log.Printf("Updating status for %s", newMRDef.Name)
+			err = kube.UpdateStatus(newMRDef, ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
