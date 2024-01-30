@@ -5,8 +5,12 @@ nav:
   - Getting Started: getting-started/index.md
   - Usage: usage/index.md
   - Examples: examples/index.md
+extra_css:
+  - assets/css/custom.css
 theme: 
-  name: material  
+  name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
   features:
     - content.code.copy
     - content.code.select

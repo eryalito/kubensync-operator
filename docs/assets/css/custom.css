@@ -1,0 +1,4 @@
+a.md-header__button > img:nth-child(1) {
+    width: 64px;
+    height: auto;
+}
