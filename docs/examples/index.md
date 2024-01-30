@@ -57,8 +57,8 @@ This MR will create a Secret `my-pull-secret` in each namespace that contains `d
         template:
             data:
             - name: pull_secret
-                type: Secret
-                ref:
+              type: Secret
+              ref:
                 name: my-pull-secret
                 namespace: default
             literal: |
