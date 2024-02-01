@@ -38,8 +38,10 @@ spec:
   - resources
   - automatic
   links:
-  - name: Kubensync
-    url: https://kubensync.domain
+  - name: Docs
+    url: https://docs.kubensync.com
+  - name: Source Code
+    url: https://github.com/eryalito/kubensync-operator
   maintainers:
   - email: eryalito@gmail.com
     name: eryalito
