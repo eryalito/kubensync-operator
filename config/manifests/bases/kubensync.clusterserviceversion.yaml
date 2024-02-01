@@ -2,7 +2,24 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[]'
+    alm-examples: |
+      [
+        {
+          "apiVersion": "automation.kubensync.com/v1alpha1",
+          "kind": "ManagedResource",
+          "metadata": {
+            "name": "serviceaccount-sample"
+          },
+          "spec": {
+            "namespaceSelector": {
+              "regex": "test"
+            },
+            "template": {
+              "literal": "---\napiVersion: v1\nkind: ServiceAccount\nmetadata:\n    name: managed-resource-sa\n    namespace: {{ .Namespace.Name }}\n"
+            }
+          }
+        }
+      ]
     capabilities: Seamless Upgrades
     categories: Integration & Delivery
     repository: https://github.com/eryalito/kubensync-operator
@@ -36,9 +53,10 @@ spec:
   - supported: true
     type: AllNamespaces
   keywords:
-  - managed
+  - namespace
+  - automation
   - resources
-  - automatic
+  - template
   links:
   - name: Docs
     url: https://docs.kubensync.com
