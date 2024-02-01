@@ -3,7 +3,8 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     alm-examples: '[]'
-    capabilities: Basic Install
+    capabilities: Seamless Upgrades
+    repository: https://github.com/eryalito/kubensync-operator
   name: kubensync.v0.0.0
   namespace: placeholder
 spec:
@@ -40,8 +41,6 @@ spec:
   links:
   - name: Docs
     url: https://docs.kubensync.com
-  - name: Source Code
-    url: https://github.com/eryalito/kubensync-operator
   maintainers:
   - email: eryalito@gmail.com
     name: eryalito
