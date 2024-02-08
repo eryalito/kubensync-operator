@@ -18,11 +18,7 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 ### Using Operator Lifecycle Manager (OLM)
 
-1. Import the catalog source:
-    ``` { .bash }
-    kubectl apply -f https://raw.githubusercontent.com/eryalito/operator-catalog/main/samples/catalogsource.yml
-    ```
-2. Install the `kubensync` operator using [olm](https://olm.operatorframework.io/docs/tasks/install-operator-with-olm/).
+1. Install the `kubensync` operator from the [OperatorHub](https://operatorhub.io/operator/kubensync).
 
 ### Using kubectl / kustomize
 
