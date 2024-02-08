@@ -575,19 +575,16 @@
 </div>
 <h3 id="using-operator-lifecycle-manager-olm">Using Operator Lifecycle Manager (OLM)</h3>
 <ol>
-<li>Import the catalog source:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/operator-catalog/main/samples/catalogsource.yml
-</span></code></pre></div></li>
-<li>Install the <code>kubensync</code> operator using <a href="https://olm.operatorframework.io/docs/tasks/install-operator-with-olm/">olm</a>.</li>
+<li>Install the <code>kubensync</code> operator from the <a href="https://operatorhub.io/operator/kubensync">OperatorHub</a>.</li>
 </ol>
 <h3 id="using-kubectl-kustomize">Using kubectl / kustomize</h3>
 <ol>
 <li>Install the operator:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
 </span></code></pre></div></li>
 <li>
 <p>Grant Permissions: 
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
 </span></code></pre></div></p>
 <div class="admonition warning cluster-admin permissions">
 <p class="admonition-title">Warning</p>
@@ -604,10 +601,10 @@
 <h3 id="using-kubectl-kustomize_1">Using kubectl / kustomize</h3>
 <ol>
 <li>Delete the operator:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
 </span></code></pre></div></li>
 <li>Delete Permissions: 
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+    <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
 </span></code></pre></div></li>
 </ol>
 
