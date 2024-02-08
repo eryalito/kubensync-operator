@@ -47,9 +47,6 @@ jobs:
           chmod +x operator-sdk_linux_amd64
           sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
 
-      - name: Generate manifests
-        run: make bundle
-
       - name: Build operator
         run: |
           make docker-build
