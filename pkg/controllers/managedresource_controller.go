@@ -65,6 +65,9 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	} else if mr.DeletionTimestamp != nil {
+		// Object is being deleted
+		return ctrl.Result{}, nil
 	}
 	err = reconcileManagedResource(ctx, r.config, mr)
 	if err != nil {

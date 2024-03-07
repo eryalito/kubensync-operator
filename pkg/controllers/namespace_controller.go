@@ -41,6 +41,9 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
+	} else if ns.DeletionTimestamp != nil {
+		// Object is being deleted
+		return reconcile.Result{}, nil
 	}
 	err = reconcileNamespace(ctx, r.config, ns)
 	if err != nil {
