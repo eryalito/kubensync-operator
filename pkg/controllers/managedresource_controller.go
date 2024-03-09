@@ -89,9 +89,16 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 
 	reconciler.Mutex.Lock()
 	defer reconciler.Mutex.Unlock()
-	nsList, err = kube.GetNamespaces(ctx, config)
-	if err != nil {
-		return err
+	if managedresource.Spec.NamespaceSelector.LabelSelector.MatchLabels == nil {
+		nsList, err = kube.GetNamespaces(ctx, config)
+		if err != nil {
+			return err
+		}
+	} else {
+		nsList, err = kube.GetNamespacesByLabel(ctx, config, managedresource.Spec.NamespaceSelector.LabelSelector)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, nsDef := range nsList.Items {
