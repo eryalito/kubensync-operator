@@ -7,7 +7,7 @@ KubeNSync is a powerful Kubernetes operator designed to make your life easier. I
 [**Check out the documentation**](https://eryalito.github.io/kubensync-operator/) to learn more about how to use KubeNSync.
 
 ## Key features
-- **Namespace Selector**: Easily choose specific namespaces using a regex.
+- **Namespace Selector**: Easily choose specific namespaces using a regex or label selectors.
 - **Resource Templates**: Create custom resources based on your own templates.
 - **Effortless Synchronization**: Your resources are syncronized by default to maintain the desired status.
 

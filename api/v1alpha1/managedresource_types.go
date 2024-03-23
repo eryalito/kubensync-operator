@@ -54,6 +54,8 @@ type ManagedResourceSpecTemplateData struct {
 type ManagedResourceSpecNamespaceSelector struct {
 	// Regex that the namespace name must match to be selected
 	Regex string `json:"regex,omitempty"`
+	// Labels that the namespace must have to be selected
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
 // ManagedResourceSpecTemplate defines the resources to be created when a namespace matches the selector

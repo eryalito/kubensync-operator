@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
@@ -45,7 +46,17 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	if !regex.MatchString(namespace.Name) {
 		return newMRDef, nil
 	}
-	reconcilerLogger.Info("Reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
+
+	labelSelector, err := metav1.LabelSelectorAsSelector(&newMRDef.Spec.NamespaceSelector.LabelSelector)
+	if err != nil {
+		return nil, err
+	}
+	namespaceLabels := labels.Set(namespace.GetLabels())
+	if !labelSelector.Matches(namespaceLabels) {
+		// The namespace's labels do not match the label selector
+		return newMRDef, nil
+	}
+
 	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template, namespace, r.RestConfig)
 	if err != nil {
 		return nil, err
