@@ -8,5 +8,6 @@ echo "#############################################"
 
 SCRIPT_DIR="$(dirname "$0")"
 /bin/bash "$SCRIPT_DIR/tests/namespaced.sh"
+/bin/bash "$SCRIPT_DIR/tests/labelselector.sh"
 /bin/bash "$SCRIPT_DIR/tests/clusterscoped.sh"
 /bin/bash "$SCRIPT_DIR/tests/cm-secret.sh"
