@@ -102,10 +102,14 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			}
 			uid = string(uns.GetUID())
 		} else if !mrDef.Spec.AvoidResourceUpdate {
-			reconcilerLoggerDebug.Info("Updating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
-			_, err = ri.Update(ctx, obj, metav1.UpdateOptions{})
-			if err != nil {
-				return nil, err
+			obj.SetResourceVersion(getObj.GetResourceVersion())
+			obj.SetUID(getObj.GetUID())
+			if !reflect.DeepEqual(getObj, obj) {
+				reconcilerLoggerDebug.Info("Updating resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
+				_, err = ri.Update(ctx, obj, metav1.UpdateOptions{})
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		createdObject := automationv1alpha1.CreatedResource{
