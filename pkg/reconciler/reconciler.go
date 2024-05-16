@@ -93,6 +93,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		uid := ""
 		if getObj != nil {
 			uid = string(getObj.GetUID())
+			metadata["ownerReferences"] = appendOwnerReference(getObj.GetOwnerReferences(), mrOwnerRefs(mrDef)[0])
 		}
 
 		if getObj == nil {
@@ -172,6 +173,21 @@ func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerRefe
 			Kind:    "ManagedResource",
 		}),
 	}
+}
+
+// appendOwnerReference appends a new OwnerReference to the list of OwnerReferences if it is not already present
+func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReference) []metav1.OwnerReference {
+	duplicated := false
+	for _, element := range list {
+		if element.APIVersion == ref.APIVersion && element.Kind == ref.Kind && element.Name == ref.Name {
+			duplicated = true
+			break
+		}
+	}
+	if !duplicated {
+		list = append(list, ref)
+	}
+	return list
 }
 
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
