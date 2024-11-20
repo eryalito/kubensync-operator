@@ -12,10 +12,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Go 1.21
+      - name: Install Go 1.23
         uses: actions/setup-go@v2
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Format code
         run: go fmt ./...

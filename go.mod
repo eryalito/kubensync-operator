@@ -1,8 +1,6 @@
 module github.com/kubensync/operator
 
-go 1.22.5
-
-toolchain go1.23.3
+go 1.23.3
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
