@@ -9,7 +9,11 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
+	sprig "github.com/Masterminds/sprig/v3"
+	"github.com/go-sprout/sprout"
+	"github.com/go-sprout/sprout/registry/conversion"
+	"github.com/go-sprout/sprout/registry/encoding"
+	"github.com/go-sprout/sprout/registry/std"
 	automationv1alpha1 "github.com/kubensync/operator/api/v1alpha1"
 	"github.com/kubensync/operator/pkg/kube"
 	corev1 "k8s.io/api/core/v1"
@@ -191,7 +195,11 @@ func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReferenc
 }
 
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
-	tmpl, err := template.New("").Funcs(sprig.FuncMap()).Parse(tpl.Literal)
+
+	handler := sprout.New()
+	handler.AddRegistries(std.NewRegistry(), conversion.NewRegistry(), encoding.NewRegistry())
+
+	tmpl, err := template.New("").Funcs(sprig.FuncMap()).Funcs(handler.Build()).Parse(tpl.Literal)
 	if err != nil {
 		return "", err
 	}
