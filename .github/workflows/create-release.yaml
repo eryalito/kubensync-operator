@@ -31,6 +31,7 @@ jobs:
         run: |
           sed -i "s|CHANGE_ME_VERSION|${{ github.event.inputs.version }}|" config/manager/kustomization.yaml
           sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
+          sed -i 's|appVersion: ".*"|appVersion: "v${{ github.event.inputs.version }}"|' chart/Chart.yaml
 
       - name: Render manifests
         run: kustomize build deploy/ > render/manifests.yaml
