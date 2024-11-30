@@ -13,7 +13,7 @@ KubeNSync is a powerful Kubernetes operator designed to make your life easier. I
 
 ## Getting Started
 
-### Install the operator
+### Install the operator using kubectl
 
 ``` bash
 kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
@@ -23,6 +23,13 @@ Grant default permissions [more info](https://docs.kubensync.com/getting-started
 
 ``` bash
 kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+```
+
+### Install the operator using Helm
+
+``` bash
+helm repo add kubensync https://docs.kubensync.com/charts
+helm install kubensync kubensync/kubensync-operator -n kubensync-system
 ```
 
 ### Create your first ManagedResource
