@@ -20,6 +20,20 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 1. Install the `kubensync` operator from the [OperatorHub](https://operatorhub.io/operator/kubensync).
 
+## Using Helm
+
+1. Add the `kubensync` Helm repository:
+    ```{ .bash }
+    helm repo add kubensync https://docs.kubensync.com/charts
+    ```
+2. Install the `kubensync` operator:
+    ```{ .bash }
+    helm install kubensync kubensync/kubensync-operator -n kubensync-system
+    ```
+
+    !!! note Customize the installation
+        You can customize the installation by providing additional parameters in the values.yaml. You can find more information about the available parameters in the [Helm Chart](https://github.com/eryalito/kubensync-operator/tree/master/chart)
+
 ### Using kubectl / kustomize
 
 1. Install the operator:
