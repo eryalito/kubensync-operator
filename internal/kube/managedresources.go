@@ -79,7 +79,7 @@ func UpdateStatus(mr *automationv1alpha1.ManagedResource, ctx context.Context) e
 func getMRDefClient() (*rest.RESTClient, error) {
 	_ = automationv1alpha1.AddToScheme(scheme.Scheme)
 	clientConfig := config.GetConfigOrDie()
-	clientConfig.ContentConfig.GroupVersion = &automationv1alpha1.GroupVersion
+	clientConfig.GroupVersion = &automationv1alpha1.GroupVersion
 	clientConfig.APIPath = "/apis"
 	clientConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 	clientConfig.UserAgent = rest.DefaultKubernetesUserAgent()

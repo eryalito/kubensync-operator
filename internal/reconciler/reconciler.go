@@ -3,6 +3,7 @@ package reconciler
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -40,6 +41,7 @@ var (
 	reconcilerLoggerDebug = ctrl.Log.WithName("reconciler").V((1))
 )
 
+// nolint:gocyclo // Ignore gocyclo for this line
 func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (*automationv1alpha1.ManagedResource, error) {
 	newMRDef := mrDef.DeepCopy()
 	r.ownerRefs = mrOwnerRefs(mrDef)
@@ -160,7 +162,14 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			return nil, err
 		}
 		reconcilerLoggerDebug.Info("Deleting resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
-		ri.Delete(ctx, resource.Name, metav1.DeleteOptions{})
+		err = ri.Delete(ctx, resource.Name, metav1.DeleteOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				reconcilerLoggerDebug.Info("Resource already deleted", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
+				continue
+			}
+			return nil, err
+		}
 	}
 
 	newMRDef.Status.CreatedResources = createdAndUpdatedResourcesList
@@ -197,7 +206,11 @@ func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReferenc
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
 
 	handler := sprout.New()
-	handler.AddRegistries(std.NewRegistry(), conversion.NewRegistry(), encoding.NewRegistry())
+	err := handler.AddRegistries(std.NewRegistry(), conversion.NewRegistry(), encoding.NewRegistry())
+	if err != nil {
+		reconcilerLogger.Error(err, "Error adding registries")
+		return "", err
+	}
 
 	tmpl, err := template.New("").Funcs(sprig.FuncMap()).Funcs(handler.Build()).Parse(tpl.Literal)
 	if err != nil {
@@ -234,10 +247,13 @@ func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, 
 	for _, dataelement := range data {
 		// Retrieve the Secret.
 		var refData map[string]interface{}
-		if dataelement.Type == automationv1alpha1.Secret {
+		switch dataelement.Type {
+		case automationv1alpha1.Secret:
 			refData, err = parseSecretData(dataelement.Ref, clientset)
-		} else if dataelement.Type == automationv1alpha1.ConfigMap {
+		case automationv1alpha1.ConfigMap:
 			refData, err = parseCMData(dataelement.Ref, clientset)
+		default:
+			err = fmt.Errorf("unsupported data type: %s", dataelement.Type)
 		}
 		if err != nil {
 			reconcilerLogger.Error(err, "Error parsing ref")
@@ -269,7 +285,7 @@ func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clie
 	}
 	data := make(map[string]interface{})
 	for key, value := range secret.Data {
-		data[key] = string(value)
+		data[key] = value
 	}
 	return data, nil
 }
