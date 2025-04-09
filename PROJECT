@@ -4,12 +4,9 @@
 # More info: https://book.kubebuilder.io/reference/project-config.html
 domain: kubensync.com
 layout:
-- go.kubebuilder.io/v3
-plugins:
-  manifests.sdk.operatorframework.io/v2: {}
-  scorecard.sdk.operatorframework.io/v2: {}
+- go.kubebuilder.io/v4
 projectName: kubensync
-repo: github.com/kubensync/operator
+repo: github.com/eryalito/kubensync-operator
 resources:
 - api:
     crdVersion: v1
@@ -18,6 +15,6 @@ resources:
   domain: kubensync.com
   group: automation
   kind: ManagedResource
-  path: github.com/kubensync/operator/api/v1alpha1
+  path: github.com/eryalito/kubensync-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

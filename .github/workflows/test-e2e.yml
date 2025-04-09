@@ -1,0 +1,32 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run on Ubuntu
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Build operator
+        run: |
+          IMG=ghcr.io/${{ github.repository }}:0.0.0-e2e-test make docker-build
+          IMG=ghcr.io/${{ github.repository }}:0.0.0-e2e-test make build-installer
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.5.0
+        with:
+          cluster_name: e2e-test
+
+      - name: Load operator image into Kind Cluster
+        run: |
+          kind load docker-image --name e2e-test ghcr.io/${{ github.repository }}:v0.0.0-e2e-test
+
+      - name: Run e2e tests
+        run: |
+          /bin/bash e2e/pre.sh && /bin/bash e2e/test.sh && /bin/bash e2e/post.sh

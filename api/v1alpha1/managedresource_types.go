@@ -89,11 +89,11 @@ type ManagedResourceStatus struct {
 	CreatedResources []CreatedResource `json:"createdResources,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
-// ManagedResource is the Schema for the managedresources API
+// ManagedResource is the Schema for the managedresources API.
 type ManagedResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -102,9 +102,9 @@ type ManagedResource struct {
 	Status ManagedResourceStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// ManagedResourceList contains a list of ManagedResource
+// ManagedResourceList contains a list of ManagedResource.
 type ManagedResourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
