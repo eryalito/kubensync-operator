@@ -25,13 +25,6 @@ Grant default permissions [more info](https://docs.kubensync.com/getting-started
 kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
 ```
 
-### Install the operator using Helm
-
-``` bash
-helm repo add kubensync https://docs.kubensync.com/charts
-helm install kubensync kubensync/kubensync-operator -n kubensync-system
-```
-
 ### Create your first ManagedResource
 
 When creating the following ManagedResource a new service account named `managed-resource-sa` will be created inside each namespace that contains `test` on its name:
