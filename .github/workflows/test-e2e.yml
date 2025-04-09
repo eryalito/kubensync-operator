@@ -2,6 +2,9 @@ name: Tests e2e
 
 on:
   push:
+    branches:
+      - master
+      - 'v*'
   pull_request:
 
 jobs:
