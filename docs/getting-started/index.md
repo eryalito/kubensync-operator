@@ -7,7 +7,6 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 - Kubernetes cluster up and running.
 - `kubectl` CLI tool configured to access your cluster.
 - `cluster-admin` privileges.
-- [Operator Lifecycle Manager (OLM)](https://github.com/operator-framework/operator-lifecycle-manager) installed if you want to use the OLM installation method.
 
 ## Installation
 
@@ -16,19 +15,15 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
     The reason for this is that the template is rendered at runtime, so it is not possible to determine the required permissions for each specific scenario before installing the operator.
 
-### Using Operator Lifecycle Manager (OLM)
-
-1. Install the `kubensync` operator from the [OperatorHub](https://operatorhub.io/operator/kubensync).
-
 ### Using kubectl / kustomize
 
 1. Install the operator:
     ```{ .bash } 
-    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
     ```
 2. Grant Permissions: 
     ``` { .bash }
-    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
     ```
 
     !!! warning Cluster-admin permissions
@@ -36,17 +31,13 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 ## Uninstallation
 
-### Using Operator Lifecycle Manager (OLM)
-1. Open the olm in your cluster.
-2. Find the kubensync operator and click "Uninstall."
-
 ### Using kubectl / kustomize
 
 1. Delete the operator:
     ```{ .bash } 
-    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
+    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
     ```
 2. Delete Permissions: 
     ``` { .bash }
-    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+    kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
     ```
