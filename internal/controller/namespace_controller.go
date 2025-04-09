@@ -29,7 +29,8 @@ type NamespaceController struct {
 
 var namespaceControllerLogger = ctrl.Log.WithName("namespace_controller")
 
-// ...
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
+
 func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// Handle the namespace event here
 	namespaceControllerLogger.Info("Reconciling Namespace", "name", req.Name)
