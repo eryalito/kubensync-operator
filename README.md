@@ -16,13 +16,13 @@ KubeNSync is a powerful Kubernetes operator designed to make your life easier. I
 ### Install the operator using kubectl
 
 ``` bash
-kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/manifests.yaml
+kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
 ```
 
 Grant default permissions [more info](https://docs.kubensync.com/getting-started/#installation):
 
 ``` bash
-kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/render/rbac.yaml
+kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
 ```
 
 ### Create your first ManagedResource
