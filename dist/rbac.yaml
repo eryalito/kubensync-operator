@@ -5,7 +5,7 @@ metadata:
   name: kubensync-cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: controller-manager
+  name: kubensync-controller-manager
   namespace: kubensync-system
 roleRef:
   kind: ClusterRole
