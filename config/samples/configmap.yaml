@@ -1,8 +1,0 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-cm
-  namespace: default
-data:
-  value: valorcito

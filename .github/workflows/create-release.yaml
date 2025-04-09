@@ -27,14 +27,8 @@ jobs:
             exit 1
           fi
 
-      - name: Replace values
-        run: |
-          sed -i "s|CHANGE_ME_VERSION|${{ github.event.inputs.version }}|" config/manager/kustomization.yaml
-          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" config/manager/kustomization.yaml
-          sed -i 's|appVersion: ".*"|appVersion: "v${{ github.event.inputs.version }}"|' chart/Chart.yaml
-
       - name: Render manifests
-        run: kustomize build deploy/ > render/manifests.yaml
+        run: IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make build-installer
 
       - name: Configure git
         run: |
@@ -65,7 +59,7 @@ jobs:
           commit-message: Update version to ${{ github.event.inputs.version }}
           author: Eryalito Bot <eryalitobot@gmail.com>
           committer: Eryalito Bot <eryalitobot@gmail.com>
-          add-paths: render/manifests.yaml
+          add-paths: dist/install.yaml
           delete-branch: true
           labels: 'skip-ci'
 

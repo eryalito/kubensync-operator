@@ -2,35 +2,8 @@ apiVersion: automation.kubensync.com/v1alpha1
 kind: ManagedResource
 metadata:
   labels:
-    app.kubernetes.io/name: managedresource
-    app.kubernetes.io/instance: managedresource-sample
-    app.kubernetes.io/part-of: kubensync
+    app.kubernetes.io/name: kubensync
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kubensync
   name: managedresource-sample
 spec:
-  namespaceSelector:
-    regex: "test"
-  template:
-    data:
-      - name: my_secret
-        type: Secret
-        ref:
-          name: my-secret
-          namespace: default
-      - name: my_cm
-        type: ConfigMap
-        ref:
-          name: my-cm
-          namespace: default
-    literal: |
-      ---
-      apiVersion: v1
-      kind: ServiceAccount
-      metadata:
-        annotations:
-          secret_value: {{ .Data.my_secret.password }}
-          cm_value: {{ .Data.my_cm.value }}
-        name: managed-resource-sa
-        namespace: {{ .Namespace.Name }}
-
+  # TODO(user): Add fields here

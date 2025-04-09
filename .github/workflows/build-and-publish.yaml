@@ -23,18 +23,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-
-      - name: Install Operator SDK
-        run: |
-          curl -LO https://github.com/operator-framework/operator-sdk/releases/download/v1.28.0/operator-sdk_linux_amd64
-          chmod +x operator-sdk_linux_amd64
-          sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
-
-      - name: Update version & variables
-        run: |
-          sed -i "s|CHANGE_ME_VERSION|${{ inputs.version }}|" Makefile
-          sed -i "s|CHANGE_ME_IMAGE|ghcr.io/${{ github.repository }}|" Makefile
+          go-version-file: go.mod
 
       - name: Log in to ghcr
         uses: docker/login-action@v3
@@ -45,4 +34,4 @@ jobs:
 
       - name: Build operator
         run: |
-          make docker-build docker-push
+          IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make docker-build docker-push
