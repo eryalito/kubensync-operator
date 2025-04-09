@@ -111,7 +111,7 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 			return err
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, MRDef.Status) {
-			managedResourceController.Info("Updating status for %s", MRDef.Name)
+			managedResourceController.Info("Updating status", "name", MRDef.Name)
 			err = kube.UpdateStatus(MRDef, ctx)
 			if err != nil {
 				return err
