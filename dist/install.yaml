@@ -298,6 +298,14 @@ metadata:
   name: kubensync-manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - automation.kubensync.com
   resources:
   - managedresources
@@ -447,7 +455,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: ghcr.io/eryalito/kubensync-operator:0.5.0-rc1
+        image: ghcr.io/eryalito/kubensync-operator:0.5.0
         livenessProbe:
           httpGet:
             path: /healthz
