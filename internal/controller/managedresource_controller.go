@@ -119,6 +119,16 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 		}
 	}
 
+	// Process existing resources in status field
+	loadedManagedResource, err := kube.GetManagedResource(ctx, managedresource.GetName())
+	if err != nil {
+		return err
+	}
+	err = rdr.ReconcileMRCreatedResources(ctx, loadedManagedResource)
+	if err != nil {
+		return err
+	}
+
 	return nil
 
 }
