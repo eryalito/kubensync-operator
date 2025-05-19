@@ -1,3 +1,4 @@
+# Usage
 
 Once the kubensync operator is installed, you can start using it by defining custom resources (CRs) that specify the resources you want to synchronize.
 
@@ -78,10 +79,8 @@ spec:
      merge patch.
    ```
 
-!!! question 
+!!! question
     - `avoidResourceUpdate`: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is `false`.
     - `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces or filter them by its labels. Regex and labels are ANDed, the namespaces must match both of them to be selected. If none of them are defined, all namespaces will be selected.
     - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
-    - `template.data`: Optional field that read `Secret` or `ConfigMap` and imports the contents to be used in the `template` under `.Data.<name>`.
-
-
+    - `template.data`: Optional field that read Kubernetes resources and expose their contents to be used in the `template` under `.Data.<name>`.
