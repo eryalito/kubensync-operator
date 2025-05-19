@@ -139,4 +139,4 @@ spec:
 ```
 
 !!! tip
-    That the ServiceAccount name is loaded from `.Data.my_resource.metadata.name` as the raw kubernetes object is loaded and not processed.
+    The ServiceAccount name is loaded from `.Data.my_resource.metadata.name` as the raw kubernetes object is loaded and not processed.
