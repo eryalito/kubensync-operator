@@ -26,6 +26,12 @@ type ManagedResourceSpecTemplateDataRef struct {
 	Name string `json:"name,omitempty"`
 	// Namespace of the resource
 	Namespace string `json:"namespace,omitempty"`
+	// Kind of the resource.
+	Kind string `json:"kind,omitempty"`
+	// ApiVersion of the resource.
+	ApiVersion string `json:"apiVersion,omitempty"`
+	// Group of the resource.
+	Group string `json:"group,omitempty"`
 }
 
 // Defines the kind of resource the ref is pointing to. Could be `Secret` or `ConfigMap`.
@@ -38,6 +44,9 @@ const (
 
 	// ConfigMap means that the ref points to a config map.
 	ConfigMap ManagedResourceSpecTemplateType = "ConfigMap"
+
+	// KubernetesResource means that the ref points to a kubernetes resource.
+	KubernetesResource ManagedResourceSpecTemplateType = "KubernetesResource"
 )
 
 // Describes extra data that will be loaded into the go template as inputs. They all will
