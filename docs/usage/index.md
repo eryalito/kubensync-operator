@@ -84,3 +84,7 @@ spec:
     - `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces or filter them by its labels. Regex and labels are ANDed, the namespaces must match both of them to be selected. If none of them are defined, all namespaces will be selected.
     - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
     - `template.data`: Optional field that read Kubernetes resources and expose their contents to be used in the `template` under `.Data.<name>`.
+
+## Examples
+
+Check out some real-world use cases of kubensync in the [examples](./examples) section. Here are some examples of how to use the `ManagedResource` kind:
