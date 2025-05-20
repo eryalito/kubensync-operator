@@ -9,21 +9,23 @@
       
       
       
+        <link rel="prev" href="../rbac-handling/">
       
       
-      <link rel="icon" href="/assets/favicon.png">
+      
+      <link rel="icon" href="../../assets/favicon.png">
       <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
     
     
       
-        <title>KubeNSync</title>
+        <title>Quota - KubeNSync</title>
       
     
     
-      <link rel="stylesheet" href="/assets/stylesheets/main.3cba04c6.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.3cba04c6.min.css">
       
         
-        <link rel="stylesheet" href="/assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -42,9 +44,9 @@
       
     
     
-      <link rel="stylesheet" href="/assets/css/custom.css">
+      <link rel="stylesheet" href="../../assets/css/custom.css">
     
-    <script>__md_scope=new URL("/",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -69,6 +71,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#creating-a-resourcequota-in-all-non-core-namespaces" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -81,9 +88,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/." title="KubeNSync" class="md-header__button md-logo" aria-label="KubeNSync" data-md-component="logo">
+    <a href="../.." title="KubeNSync" class="md-header__button md-logo" aria-label="KubeNSync" data-md-component="logo">
       
-  <img src="/assets/logo.png" alt="logo">
+  <img src="../../assets/logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -100,7 +107,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Quota
             
           </span>
         </div>
@@ -213,9 +220,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/." title="KubeNSync" class="md-nav__button md-logo" aria-label="KubeNSync" data-md-component="logo">
+    <a href="../.." title="KubeNSync" class="md-nav__button md-logo" aria-label="KubeNSync" data-md-component="logo">
       
-  <img src="/assets/logo.png" alt="logo">
+  <img src="../../assets/logo.png" alt="logo">
 
     </a>
     KubeNSync
@@ -242,7 +249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -262,7 +269,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -282,7 +289,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/usage/" class="md-nav__link">
+      <a href="../../usage/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -337,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/reference/" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -358,7 +365,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/reference/selectors/" class="md-nav__link">
+      <a href="../../reference/selectors/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -379,7 +386,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/reference/template/" class="md-nav__link">
+      <a href="../../reference/template/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -400,7 +407,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/reference/template-functions/" class="md-nav__link">
+      <a href="../../reference/template-functions/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -421,7 +428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/reference/template-data/" class="md-nav__link">
+      <a href="../../reference/template-data/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -446,17 +453,19 @@
       
   
   
+    
   
   
+  
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -470,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -484,7 +493,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/examples/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -505,7 +514,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/examples/service-account/" class="md-nav__link">
+      <a href="../service-account/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -526,7 +535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/examples/pull-secret/" class="md-nav__link">
+      <a href="../pull-secret/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -547,7 +556,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/examples/rbac-handling/" class="md-nav__link">
+      <a href="../rbac-handling/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -565,10 +574,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="/examples/quota/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Quota
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -577,6 +606,44 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#use-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      Use case
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -606,6 +673,34 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#use-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      Use case
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -617,8 +712,57 @@
             <div class="md-content" data-md-component="content">
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+  
+  
+
+
+<h1 id="creating-a-resourcequota-in-all-non-core-namespaces">Creating a ResourceQuota in All Non-Core Namespaces</h1>
+<h2 id="use-case">Use case</h2>
+<p>To avoid overconsumption of resources in a Kubernetes cluster, it is important to set up resource quotas in all namespace in non-core namespaces. When having a multi-tenant cluster, it is important to set up resource quotas in all namespaces, specially on non-production ones.</p>
+<h2 id="implementation">Implementation</h2>
+<p>This ManagedResource (MR) will create a ResourceQuota <code>default-quota</code> in each namespace that does not start with <code>kube</code>, <code>kub</code>, or <code>k</code> (core namespaces).</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">automation.kubensync.com/v1alpha1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ManagedResource</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default-quota</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">avoidResourceUpdate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">namespaceSelector</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nt">regex</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;^[^k].*|k[^u].*|ku[^b].*&quot;</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="nt">literal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">            </span><span class="no">---</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">            </span><span class="no">apiVersion: v1</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">            </span><span class="no">kind: ResourceQuota</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">            </span><span class="no">metadata:</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">                </span><span class="no">name: cpu-quota</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">                </span><span class="no">namespace: {{ .Namespace.Name }}</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">            </span><span class="no">spec:</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">                </span><span class="no">hard:</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">                    </span><span class="no">cpu: &quot;4&quot;</span>
+</span></code></pre></div>
+<ol>
+<li>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+As Go regex stdlib does not support negative lookaheads the negative expressions is a bit funny. It would be <code>^(?!kube-).*</code>.</div>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -652,10 +796,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "/", "features": ["content.code.copy", "content.code.select", "content.code.annotate"], "search": "/assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy", "content.code.select", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="/assets/javascripts/bundle.fe8b6f2b.min.js"></script>
+      <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
     
   </body>
