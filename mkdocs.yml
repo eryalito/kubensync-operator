@@ -5,12 +5,17 @@ nav:
   - Getting Started: getting-started/index.md
   - Usage: usage/index.md
   - Reference:
+      - Overview: reference/index.md
       - Selectors: reference/selectors.md
-      # - Templating:
       - Template: reference/template.md
       - Template Functions: reference/template-functions.md 
       - Template Data: reference/template-data.md
-  - Examples: examples/index.md
+  - Examples:
+      - Overview: examples/index.md
+      - Service Account: examples/service-account.md
+      - Pull Secret: examples/pull-secret.md
+      - RBAC: examples/rbac-handling.md
+      - Quota: examples/quota.md
 extra_css:
   - assets/css/custom.css
 theme: 
