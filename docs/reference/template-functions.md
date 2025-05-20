@@ -13,7 +13,7 @@ The default functions provided by the Go template engine are available in the te
 
 ## Additional Functions
 
-Both [Sprig](https://github.com/Masterminds/sprig) and [Sprout](https://github.com/go-sprout/sprout) are included in the template engine. These libraries provide a set of additional functions that can be used to manipulate strings, arrays, maps and objects.
+[Sprout](https://github.com/go-sprout/sprout) is included in the template engine. This library provides a set of additional functions that can be used to manipulate strings, arrays, maps and objects.
 
 Highlighted functions include:
 
@@ -27,4 +27,4 @@ Highlighted functions include:
 - `indent`: Indents a string by the specified number of spaces.
 
 !!! info
-    Full list of functions can be found in the [Sprig documentation](https://masterminds.github.io/sprig) and [Sprout documentation](https://docs.atom.codes/sprout/registries/list-of-all-registries)
+    Full list of functions can be found in the [Sprout documentation](https://docs.atom.codes/sprout/registries/list-of-all-registries).
