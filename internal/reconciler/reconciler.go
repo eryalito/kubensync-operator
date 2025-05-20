@@ -3,7 +3,6 @@ package reconciler
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -226,57 +225,4 @@ func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTempla
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, config *rest.Config) (map[string]interface{}, error) {
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		reconcilerLogger.Error(err, "Error creating Kubernetes client")
-		return nil, err
-	}
-	parsedData := make(map[string]interface{})
-	for _, dataelement := range data {
-		// Retrieve the Secret.
-		var refData map[string]interface{}
-		switch dataelement.Type {
-		case automationv1alpha1.Secret:
-			refData, err = parseSecretData(dataelement.Ref, clientset)
-		case automationv1alpha1.ConfigMap:
-			refData, err = parseCMData(dataelement.Ref, clientset)
-		default:
-			err = fmt.Errorf("unsupported data type: %s", dataelement.Type)
-		}
-		if err != nil {
-			reconcilerLogger.Error(err, "Error parsing ref")
-			return nil, err
-		}
-		parsedData[dataelement.Name] = refData
-	}
-	return parsedData, nil
-}
-
-func parseSecretData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
-	secret, err := clientset.CoreV1().Secrets(ref.Namespace).Get(context.TODO(), ref.Name, metav1.GetOptions{})
-	if err != nil {
-		reconcilerLogger.Error(err, "Error retrieving Secret")
-		return nil, err
-	}
-	data := make(map[string]interface{})
-	for key, value := range secret.Data {
-		data[key] = string(value)
-	}
-	return data, nil
-}
-
-func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
-	secret, err := clientset.CoreV1().ConfigMaps(ref.Namespace).Get(context.TODO(), ref.Name, metav1.GetOptions{})
-	if err != nil {
-		reconcilerLogger.Error(err, "Error retrieving Secret")
-		return nil, err
-	}
-	data := make(map[string]interface{})
-	for key, value := range secret.Data {
-		data[key] = value
-	}
-	return data, nil
 }

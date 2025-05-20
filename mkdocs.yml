@@ -4,6 +4,12 @@ nav:
   - Home: index.md
   - Getting Started: getting-started/index.md
   - Usage: usage/index.md
+  - Reference:
+      - Selectors: reference/selectors.md
+      # - Templating:
+      - Template: reference/template.md
+      - Template Functions: reference/template-functions.md 
+      - Template Data: reference/template-data.md
   - Examples: examples/index.md
 extra_css:
   - assets/css/custom.css
