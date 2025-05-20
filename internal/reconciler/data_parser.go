@@ -29,7 +29,7 @@ func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, 
 	}
 	parsedData := make(map[string]interface{})
 	for _, dataelement := range data {
-		// Retrieve the Secret.
+		dataPerserLoggerDebug.Info("Parsing data element", "name", dataelement.Name, "type", dataelement.Type)
 		var refData map[string]interface{}
 		switch dataelement.Type {
 		case automationv1alpha1.Secret:
