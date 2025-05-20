@@ -9,13 +9,10 @@ import (
 	"sync"
 	"text/template"
 
-	sprig "github.com/Masterminds/sprig/v3"
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
 	"github.com/go-sprout/sprout"
-	"github.com/go-sprout/sprout/registry/conversion"
-	"github.com/go-sprout/sprout/registry/encoding"
-	"github.com/go-sprout/sprout/registry/std"
+	"github.com/go-sprout/sprout/group/all"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -196,13 +193,14 @@ func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReferenc
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
 
 	handler := sprout.New()
-	err := handler.AddRegistries(std.NewRegistry(), conversion.NewRegistry(), encoding.NewRegistry())
+	// Add all the registries to the handler
+	err := handler.AddGroups(all.RegistryGroup())
 	if err != nil {
 		reconcilerLogger.Error(err, "Error adding registries")
 		return "", err
 	}
 
-	tmpl, err := template.New("").Funcs(sprig.FuncMap()).Funcs(handler.Build()).Parse(tpl.Literal)
+	tmpl, err := template.New("").Funcs(handler.Build()).Parse(tpl.Literal)
 	if err != nil {
 		return "", err
 	}
