@@ -16,6 +16,8 @@ nav:
       - Pull Secret: examples/pull-secret.md
       - RBAC: examples/rbac-handling.md
       - Quota: examples/quota.md
+  - Versions:
+      - v0.8.0: versions/v0.8.0.md
 extra_css:
   - assets/css/custom.css
 theme: 
