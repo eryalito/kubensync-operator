@@ -895,8 +895,8 @@
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">                </span><span class="no">namespace: {{ .Namespace.Name }}</span>
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">            </span><span class="no">type: Opaque</span>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">            </span><span class="no">data:</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">                </span><span class="no">key1: {{ index .Data.my_secret &quot;key1&quot; | b64enc }}</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">                </span><span class="no">key2: {{ index .Data.my_secret &quot;key2&quot; | b64enc }}</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">                </span><span class="no">key1: {{ index .Data.my_secret &quot;key1&quot; | base64Encode }}</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">                </span><span class="no">key2: {{ index .Data.my_secret &quot;key2&quot; | base64Encode }}</span>
 </span></code></pre></div>
 <h3 id="configmap">ConfigMap</h3>
 <p>The <code>ConfigMap</code> type is used to load a Kubernetes ConfigMap resource. The <code>ref</code> field must contain only the name and namespace of the ConfigMap resource. The ConfigMap resource is loaded and processed, so the keys and values of the ConfigMap are available in the template using the <code>.Data.&lt;name&gt;</code> syntax.</p>

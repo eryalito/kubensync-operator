@@ -812,7 +812,7 @@
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">                </span><span class="no">namespace: {{ .Namespace.Name }}</span>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">            </span><span class="no">type: kubernetes.io/dockerconfigjson</span>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">            </span><span class="no">data:</span>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">                </span><span class="no">.dockerconfigjson: &#39;{{ index .Data.pull_secret &quot;.dockerconfigjson&quot; | b64enc }}&#39;</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">                </span><span class="no">.dockerconfigjson: &#39;{{ index .Data.pull_secret &quot;.dockerconfigjson&quot; | base64Encode }}&#39;</span>
 </span></code></pre></div>
 <ol>
 <li>
