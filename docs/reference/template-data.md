@@ -70,8 +70,8 @@ spec:
                 namespace: {{ .Namespace.Name }}
             type: Opaque
             data:
-                key1: {{ index .Data.my_secret "key1" | b64enc }}
-                key2: {{ index .Data.my_secret "key2" | b64enc }}
+                key1: {{ index .Data.my_secret "key1" | base64Encode }}
+                key2: {{ index .Data.my_secret "key2" | base64Encode }}
 ```
 
 ### ConfigMap

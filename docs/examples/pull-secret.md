@@ -32,5 +32,5 @@ spec:
                 namespace: {{ .Namespace.Name }}
             type: kubernetes.io/dockerconfigjson
             data:
-                .dockerconfigjson: '{{ index .Data.pull_secret ".dockerconfigjson" | b64enc }}'
+                .dockerconfigjson: '{{ index .Data.pull_secret ".dockerconfigjson" | base64Encode }}'
 ```
