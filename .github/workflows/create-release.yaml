@@ -53,7 +53,7 @@ jobs:
 
       - name: Update helm docs
         uses: losisin/helm-docs-github-action@v1
-        
+
       - name: Configure git
         run: |
           git config --local user.email "eryalitobot@gmail.com"
@@ -83,7 +83,7 @@ jobs:
           commit-message: Update version to ${{ github.event.inputs.version }}
           author: Eryalito Bot <eryalitobot@gmail.com>
           committer: Eryalito Bot <eryalitobot@gmail.com>
-          add-paths: dist/install.yaml
+          add-paths: dist/install.yaml,dist/chart/Chart.yaml,dist/chart/values.yaml,dist/chart/README.md
           delete-branch: true
           labels: 'skip-ci'
 
