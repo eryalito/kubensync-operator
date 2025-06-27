@@ -55,7 +55,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	if err != nil {
 		return nil, err
 	}
-	manifestList := regexp.MustCompile(`(?m)^\s*---\s*$`).Split(manifests, -1)
+	manifestList := regexp.MustCompile(`^---\s*$`).Split(manifests, -1)
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
 	for _, manifest := range manifestList {
