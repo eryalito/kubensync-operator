@@ -2,8 +2,8 @@ apiVersion: v2
 name: kubensync
 description: A Helm chart to distribute the kubensync operator.
 type: application
-version: 0.9.0-rc2
-appVersion: "0.9.0-rc2"
+version: 0.9.0
+appVersion: "0.9.0"
 icon: "https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png"
 home: https://docs.kubensync.com
 sources:
