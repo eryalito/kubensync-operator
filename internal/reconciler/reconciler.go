@@ -68,7 +68,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			reconcilerLogger.Error(err, "Error decoding manifests")
 			continue
 		}
-		if obj.Object == nil || len(obj.Object) == 0 {
+		if len(obj.Object) == 0 {
 			continue
 		}
 
