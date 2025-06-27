@@ -1,0 +1,44 @@
+{{- if .Values.rbac.enable }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: kubensync-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - automation.kubensync.com
+  resources:
+  - managedresources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - automation.kubensync.com
+  resources:
+  - managedresources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - automation.kubensync.com
+  resources:
+  - managedresources/status
+  verbs:
+  - get
+  - patch
+  - update
+{{- end -}}

@@ -30,6 +30,30 @@ jobs:
       - name: Render manifests
         run: IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make build-installer
 
+      - name: Update Chart files
+        run: |
+          # IMPORTANT: Adjust this path to your Chart.yaml file
+          CHART_FILE="dist/chart/Chart.yaml"
+          VALUES_FILE="dist/chart/values.yaml"
+          NEW_VERSION="${{ github.event.inputs.version }}"
+
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "Error: Chart file not found at $CHART_FILE"
+            exit 1
+          fi
+
+          echo "Updating $CHART_FILE to version $NEW_VERSION and appVersion $NEW_VERSION..."
+          yq e ".version = \"$NEW_VERSION\"" -i "$CHART_FILE"
+          yq e ".appVersion = \"$NEW_VERSION\"" -i "$CHART_FILE"
+          echo "Updating $VALUES_FILE to image tag $NEW_VERSION..."
+          yq e ".image.tag = \"$NEW_VERSION\"" -i "$VALUES_FILE"
+
+          echo "Successfully updated $CHART_FILE:"
+          cat "$CHART_FILE"
+
+      - name: Update helm docs
+        uses: losisin/helm-docs-github-action@v1
+        
       - name: Configure git
         run: |
           git config --local user.email "eryalitobot@gmail.com"
