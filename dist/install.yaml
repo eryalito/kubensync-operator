@@ -466,7 +466,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: ghcr.io/eryalito/kubensync-operator:0.9.0-rc1
+        image: ghcr.io/eryalito/kubensync-operator:0.9.0-rc2
         livenessProbe:
           httpGet:
             path: /healthz
