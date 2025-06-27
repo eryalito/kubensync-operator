@@ -35,3 +35,37 @@ jobs:
       - name: Build operator
         run: |
           IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make docker-build docker-push
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Get release version and chart info
+        shell: bash
+        id: get_chart_info
+        run: |
+          HELM_CHART_VERSION=$(yq .version "dist/chart/Chart.yaml")
+          echo "HELM_CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
+          HELM_CHART_NAME=$(yq .name "dist/chart/Chart.yaml")
+          echo "HELM_CHART_NAME=${HELM_CHART_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Package Helm Chart
+        shell: bash
+        id: package_chart
+        run: |
+          helm package dist/chart
+          
+          TGZ_FILE_PATH="${{ steps.get_chart_info.outputs.HELM_CHART_NAME }}-${{ steps.get_chart_info.outputs.HELM_CHART_VERSION }}.tgz"
+          echo "TGZ_FILE_PATH=${TGZ_FILE_PATH}" >> $GITHUB_OUTPUT
+          # Verify the packaged chart file exists
+          if [ ! -f "$TGZ_FILE_PATH" ]; then
+            echo "Error: Helm package $TGZ_FILE_PATH not found after packaging."
+            echo "Listing current directory contents:"
+            ls -l .
+            exit 1
+          fi
+
+      - name: Push Helm Chart to OCI Registry
+        shell: bash
+        run: |
+          helm push "${{ steps.package_chart.outputs.TGZ_FILE_PATH }}" oci://ghcr.io/eryalito/kubensync-charts
+          echo "Helm chart pushed to OCI registry successfully."

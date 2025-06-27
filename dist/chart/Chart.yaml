@@ -1,0 +1,14 @@
+apiVersion: v2
+name: kubensync
+description: A Helm chart to distribute the kubensync operator.
+type: application
+version: 0.8.0
+appVersion: "0.8.0"
+icon: "https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png"
+home: https://docs.kubensync.com
+sources:
+  - https://github.com/eryalito/kubensync-operator
+maintainers:
+  - name: Eryalito
+    email: eryalito@gmail.com
+    url: https://eryalito.dev
