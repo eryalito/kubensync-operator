@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"reflect"
-	"regexp"
 	"strings"
 	"sync"
 	"text/template"
@@ -55,18 +54,21 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	if err != nil {
 		return nil, err
 	}
-	manifestList := regexp.MustCompile(`(?m)^\s*---\s*$`).Split(manifests, -1)
+	// Use apimachinery's YAML decoder to iterate over all documents in the manifest
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
-	for _, manifest := range manifestList {
-		if len(manifest) == 0 {
+	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifests), 1024)
+	for {
+		obj := &unstructured.Unstructured{}
+		err := decoder.Decode(obj)
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			reconcilerLogger.Error(err, "Error decoding manifests")
 			continue
 		}
-		obj := &unstructured.Unstructured{}
-
-		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 1024)
-		if err := decoder.Decode(obj); err != nil {
-			reconcilerLogger.Error(err, "Error deconding manifests")
+		if len(obj.Object) == 0 {
 			continue
 		}
 
