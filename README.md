@@ -19,7 +19,7 @@ KubeNSync is a powerful Kubernetes operator designed to make your life easier. I
 kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
 ```
 
-Grant default permissions [more info](https://docs.kubensync.com/getting-started/#installation):
+Grant default permissions [more info](https://kubensync.com/getting-started/#installation):
 
 ``` bash
 kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
@@ -48,4 +48,4 @@ spec:
 EOF
 ```
 
-For more examples check out [the docs](https://docs.kubensync.com/examples/)
+For more examples check out [the docs](https://kubensync.com/examples/)
