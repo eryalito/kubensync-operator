@@ -6,38 +6,47 @@ Before deploying the kubensync operator, ensure you have the following prerequis
 
 - Kubernetes cluster up and running.
 - `kubectl` CLI tool configured to access your cluster.
+- `helm` CLI tool installed (if you choose to deploy using Helm).
 - `cluster-admin` privileges.
 
 ## Installation
 
-!!! warning "Default SA permissions"
-    After installing the operator, the operator service account does not have permissions to create resources by default. Therefore, you need to define and grant the necessary permissions manually. This allows you to specify the minimum permission level required for the operator to create objects.
+### Using kubectl
 
-    The reason for this is that the template is rendered at runtime, so it is not possible to determine the required permissions for each specific scenario before installing the operator.
+Install the operator:
 
-### Using kubectl / kustomize
-
-1. Install the operator:
-    ```{ .bash } 
     kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
-    ```
-2. Grant Permissions: 
-    ``` { .bash }
-    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
-    ```
 
-    !!! warning Cluster-admin permissions
-        This permissions will grant the operator cluster-admin permissions. It's a good way of testing the operator, but specific permissions should be defined acording to the resources it will manage in each specific case.
+Grant Permissions:
+
+    kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
+
+!!! warning Cluster-admin permissions
+    This permissions will grant the operator cluster-admin permissions. It's a good way of testing the operator, but specific permissions should be defined according to the resources it will manage in each specific case.
+
+### Using Helm
+
+Install the operator using the Helm chart:
+
+    helm install kubensync oci://ghcr.io/eryalito/kubensync-charts/kubensync --version 0.9.0 -n kubensync-system --create-namespace --wait
+
+!!! info "Helm Chart"
+    To get more information about the Helm chart, check the [Helm Chart documentation](https://github.com/eryalito/kubensync-operator/tree/master/dist/chart)
 
 ## Uninstallation
 
-### Using kubectl / kustomize
+### Using kubectl
 
-1. Delete the operator:
-    ```{ .bash } 
+Delete the operator:
+
     kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
-    ```
-2. Delete Permissions: 
-    ``` { .bash }
+
+Delete Permissions:
+
     kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
-    ```
+
+### Using Helm
+
+Uninstall the operator using Helm:
+
+    helm uninstall kubensync -n kubensync-system
