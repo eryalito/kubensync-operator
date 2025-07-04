@@ -336,9 +336,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-kubectl-kustomize" class="md-nav__link">
+  <a href="#using-kubectl" class="md-nav__link">
     <span class="md-ellipsis">
-      Using kubectl / kustomize
+      Using kubectl
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-helm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Helm
     </span>
   </a>
   
@@ -360,9 +369,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-kubectl-kustomize_1" class="md-nav__link">
+  <a href="#using-kubectl_1" class="md-nav__link">
     <span class="md-ellipsis">
-      Using kubectl / kustomize
+      Using kubectl
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-helm_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Helm
     </span>
   </a>
   
@@ -737,6 +755,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../versions/v0.9.0/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    v0.9.0
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../versions/v0.8.0/" class="md-nav__link">
         
   
@@ -804,9 +843,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-kubectl-kustomize" class="md-nav__link">
+  <a href="#using-kubectl" class="md-nav__link">
     <span class="md-ellipsis">
-      Using kubectl / kustomize
+      Using kubectl
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-helm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Helm
     </span>
   </a>
   
@@ -828,9 +876,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-kubectl-kustomize_1" class="md-nav__link">
+  <a href="#using-kubectl_1" class="md-nav__link">
     <span class="md-ellipsis">
-      Using kubectl / kustomize
+      Using kubectl
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-helm_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Helm
     </span>
   </a>
   
@@ -865,39 +922,41 @@
 <ul>
 <li>Kubernetes cluster up and running.</li>
 <li><code>kubectl</code> CLI tool configured to access your cluster.</li>
+<li><code>helm</code> CLI tool installed (if you choose to deploy using Helm).</li>
 <li><code>cluster-admin</code> privileges.</li>
 </ul>
 <h2 id="installation">Installation</h2>
-<div class="admonition warning">
-<p class="admonition-title">Default SA permissions</p>
-<p>After installing the operator, the operator service account does not have permissions to create resources by default. Therefore, you need to define and grant the necessary permissions manually. This allows you to specify the minimum permission level required for the operator to create objects.</p>
-<p>The reason for this is that the template is rendered at runtime, so it is not possible to determine the required permissions for each specific scenario before installing the operator.</p>
-</div>
-<h3 id="using-kubectl-kustomize">Using kubectl / kustomize</h3>
-<ol>
-<li>Install the operator:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
-</span></code></pre></div></li>
-<li>
-<p>Grant Permissions: 
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
-</span></code></pre></div></p>
+<h3 id="using-kubectl">Using kubectl</h3>
+<p>Install the operator:</p>
+<div class="language-text highlight"><pre><span></span><code>kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
+</code></pre></div>
+<p>Grant Permissions:</p>
+<div class="language-text highlight"><pre><span></span><code>kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
+</code></pre></div>
 <div class="admonition warning cluster-admin permissions">
 <p class="admonition-title">Warning</p>
-<p>This permissions will grant the operator cluster-admin permissions. It's a good way of testing the operator, but specific permissions should be defined acording to the resources it will manage in each specific case.</p>
+<p>This permissions will grant the operator cluster-admin permissions. It's a good way of testing the operator, but specific permissions should be defined according to the resources it will manage in each specific case.</p>
 </div>
-</li>
-</ol>
+<h3 id="using-helm">Using Helm</h3>
+<p>Install the operator using the Helm chart:</p>
+<div class="language-text highlight"><pre><span></span><code>helm install kubensync oci://ghcr.io/eryalito/kubensync-charts/kubensync --version 0.9.0 -n kubensync-system --create-namespace --wait
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Helm Chart</p>
+<p>To get more information about the Helm chart, check the <a href="https://github.com/eryalito/kubensync-operator/tree/master/dist/chart">Helm Chart documentation</a></p>
+</div>
 <h2 id="uninstallation">Uninstallation</h2>
-<h3 id="using-kubectl-kustomize_1">Using kubectl / kustomize</h3>
-<ol>
-<li>Delete the operator:
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
-</span></code></pre></div></li>
-<li>Delete Permissions: 
-    <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
-</span></code></pre></div></li>
-</ol>
+<h3 id="using-kubectl_1">Using kubectl</h3>
+<p>Delete the operator:</p>
+<div class="language-text highlight"><pre><span></span><code>kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
+</code></pre></div>
+<p>Delete Permissions:</p>
+<div class="language-text highlight"><pre><span></span><code>kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
+</code></pre></div>
+<h3 id="using-helm_1">Using Helm</h3>
+<p>Uninstall the operator using Helm:</p>
+<div class="language-text highlight"><pre><span></span><code>helm uninstall kubensync -n kubensync-system
+</code></pre></div>
 
 
 

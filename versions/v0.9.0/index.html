@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../rbac-handling/">
+        <link rel="prev" href="../../examples/quota/">
       
       
-        <link rel="next" href="../../versions/v0.9.0/">
+        <link rel="next" href="../v0.8.0/">
       
       
       <link rel="icon" href="../../assets/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Quota - KubeNSync</title>
+        <title>v0.9.0 - KubeNSync</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#creating-a-resourcequota-in-all-non-core-namespaces" class="md-skip">
+        <a href="#version-v090" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Quota
+              v0.9.0
             
           </span>
         </div>
@@ -455,19 +455,17 @@
       
   
   
-    
   
   
-  
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -481,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -495,7 +493,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -516,7 +514,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../service-account/" class="md-nav__link">
+      <a href="../../examples/service-account/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -537,7 +535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pull-secret/" class="md-nav__link">
+      <a href="../../examples/pull-secret/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -558,7 +556,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rbac-handling/" class="md-nav__link">
+      <a href="../../examples/rbac-handling/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -571,6 +569,71 @@
   
 
               
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/quota/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quota
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Versions
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Versions
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
             
               
                 
@@ -592,7 +655,7 @@
           
   
   <span class="md-ellipsis">
-    Quota
+    v0.9.0
   </span>
   
 
@@ -603,7 +666,7 @@
         
   
   <span class="md-ellipsis">
-    Quota
+    v0.9.0
   </span>
   
 
@@ -625,18 +688,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#use-case" class="md-nav__link">
+  <a href="#new-features" class="md-nav__link">
     <span class="md-ellipsis">
-      Use case
+      New Features
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation" class="md-nav__link">
+  <a href="#fixes" class="md-nav__link">
     <span class="md-ellipsis">
-      Implementation
+      Fixes
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release
     </span>
   </a>
   
@@ -651,48 +723,6 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Versions
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Versions
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
               
                 
   
@@ -700,28 +730,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../versions/v0.9.0/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    v0.9.0
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../versions/v0.8.0/" class="md-nav__link">
+      <a href="../v0.8.0/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -769,18 +778,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#use-case" class="md-nav__link">
+  <a href="#new-features" class="md-nav__link">
     <span class="md-ellipsis">
-      Use case
+      New Features
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation" class="md-nav__link">
+  <a href="#fixes" class="md-nav__link">
     <span class="md-ellipsis">
-      Implementation
+      Fixes
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release
     </span>
   </a>
   
@@ -804,38 +822,18 @@
   
 
 
-<h1 id="creating-a-resourcequota-in-all-non-core-namespaces">Creating a ResourceQuota in All Non-Core Namespaces</h1>
-<h2 id="use-case">Use case</h2>
-<p>To avoid overconsumption of resources in a Kubernetes cluster, it is important to set up resource quotas in all namespace in non-core namespaces. When having a multi-tenant cluster, it is important to set up resource quotas in all namespaces, specially on non-production ones.</p>
-<h2 id="implementation">Implementation</h2>
-<p>This ManagedResource (MR) will create a ResourceQuota <code>default-quota</code> in each namespace that does not start with <code>kube</code>, <code>kub</code>, or <code>k</code> (core namespaces).</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">automation.kubensync.com/v1alpha1</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ManagedResource</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default-quota</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">spec</span><span class="p">:</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">avoidResourceUpdate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">namespaceSelector</span><span class="p">:</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nt">regex</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;^[^k].*|k[^u].*|ku[^b].*&quot;</span><span class="w"> </span><span class="c1"># (1)!</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="nt">literal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">            </span><span class="no">---</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">            </span><span class="no">apiVersion: v1</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">            </span><span class="no">kind: ResourceQuota</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">            </span><span class="no">metadata:</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">                </span><span class="no">name: cpu-quota</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">                </span><span class="no">namespace: {{ .Namespace.Name }}</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">            </span><span class="no">spec:</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">                </span><span class="no">hard:</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">                    </span><span class="no">cpu: &quot;4&quot;</span>
-</span></code></pre></div>
-<ol>
-<li>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-As Go regex stdlib does not support negative lookaheads the negative expressions is a bit funny. It would be <code>^(?!kube-).*</code>.</div>
-</li>
-</ol>
+<h1 id="version-v090">Version v0.9.0</h1>
+<p>This is the documentation for version 0.9.0 of the project.</p>
+<h2 id="new-features">New Features</h2>
+<ul>
+<li>Added a new way of deploying the operator using Helm charts. This allows for easier integration with existing Kubernetes clusters and simplifies the deployment process. Check the <a href="/getting-started">Installation Guide</a> for more details.</li>
+</ul>
+<h2 id="fixes">Fixes</h2>
+<ul>
+<li>Fixed scenarios where the template was not properly split by <code>---</code>. Moved to using kubernetes apimachinery method, which is the same that kubectl uses to split the template.</li>
+</ul>
+<h2 id="release">Release</h2>
+<p>Check out the release on <a href="https://github.com/eryalito/kubensync-operator/releases/tag/v0.9.0">GitHub</a></p>
 
 
 
