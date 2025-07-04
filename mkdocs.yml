@@ -17,6 +17,7 @@ nav:
       - RBAC: examples/rbac-handling.md
       - Quota: examples/quota.md
   - Versions:
+      - v0.9.0: versions/v0.9.0.md
       - v0.8.0: versions/v0.8.0.md
 extra_css:
   - assets/css/custom.css
