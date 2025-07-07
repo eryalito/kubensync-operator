@@ -1,5 +1,6 @@
 site_name: KubeNSync
 repo_url: https://github.com/eryalito/kubensync-operator
+site_url: https://kubensync.com
 nav:
   - Home: index.md
   - Getting Started: getting-started/index.md
