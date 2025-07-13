@@ -11,21 +11,11 @@ KubeNSync is a powerful Kubernetes operator designed to make your life easier. I
 - **Resource Templates**: Create custom resources based on your own templates.
 - **Effortless Synchronization**: Your resources are syncronized by default to maintain the desired status.
 
-## Getting Started
+## Installation
 
-### Install the operator using kubectl
+Follow the [**Getting Started**](https://kubensync.com/getting-started/) guide to deploy KubeNSync to your cluster.
 
-``` bash
-kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/install.yaml
-```
-
-Grant default permissions [more info](https://kubensync.com/getting-started/#installation):
-
-``` bash
-kubectl apply -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
-```
-
-### Create your first ManagedResource
+## Create your first ManagedResource
 
 When creating the following ManagedResource a new service account named `managed-resource-sa` will be created inside each namespace that contains `test` on its name:
 ``` bash
@@ -48,4 +38,4 @@ spec:
 EOF
 ```
 
-For more examples check out [the docs](https://kubensync.com/examples/)
+For more examples check out [the examples](https://kubensync.com/examples/).
