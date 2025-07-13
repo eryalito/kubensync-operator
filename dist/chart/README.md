@@ -4,7 +4,7 @@
 
 A Helm chart to distribute the kubensync operator.
 
-**Homepage:** <https://docs.kubensync.com>
+**Homepage:** <https://kubensync.com>
 
 ## Maintainers
 
