@@ -1,3 +1,10 @@
+# License
+
+- **Code and documentation**: [Apache License 2.0](LICENSE)
+- **Blog content (`docs/blog/`)**: [Creative Commons Attribution 4.0 International License (CC BY 4.0)](docs/blog/LICENSE)
+
+Blog posts are licensed separately under the CC BY 4.0. See `docs/blog/LICENSE` for details. Authors are credited in each post and in [`docs/blog/.authors.yml`](docs/blog/.authors.yml).
+
 # KubeNSync operator
 Welcome to KubeNSync, your go-to Kubernetes operator for simplifying resource management across namespaces and the entire cluster. Say goodbye to repetitive resource creation and hello to efficient deployment with KubeNSync!
 

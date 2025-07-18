@@ -199,3 +199,9 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+---
+
+## Additional License Notice
+
+Blog content under `docs/blog/` is licensed separately under the Creative Commons Attribution 4.0 International License (CC BY 4.0). See `docs/blog/LICENSE` for details. Authors are credited in each post and in `docs/blog/.authors.yml`.
