@@ -1,6 +1,9 @@
 site_name: KubeNSync
 repo_url: https://github.com/eryalito/kubensync-operator
 site_url: https://kubensync.com
+plugins:
+  - search 
+  - blog
 nav:
   - Home: index.md
   - Getting Started: getting-started/index.md
@@ -20,6 +23,8 @@ nav:
   - Versions:
       - v0.9.0: versions/v0.9.0.md
       - v0.8.0: versions/v0.8.0.md
+  - Blog:
+      - Posts: blog/index.md
 extra_css:
   - assets/css/custom.css
 theme: 
@@ -47,7 +52,11 @@ theme:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
