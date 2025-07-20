@@ -9,9 +9,17 @@ on:
 
 jobs:
   test:
-    name: Run on Ubuntu
+    name: Run on Ubuntu with k8s v${{ matrix.k8s_version }}
     runs-on: ubuntu-latest
     if: '!contains(github.event.pull_request.labels.*.name, ''skip-ci'')'
+    strategy:
+      matrix:
+        k8s_version:
+          - "1.28"
+          - "1.29"
+          - "1.30"
+          - "1.31"
+          - "1.32"
     steps:
       - name: Clone the code
         uses: actions/checkout@v4
@@ -25,6 +33,7 @@ jobs:
         uses: helm/kind-action@v1.12.0
         with:
           cluster_name: e2e-test
+          node_image: kindest/node:v${{ matrix.k8s_version }}.0
 
       - name: Load operator image into Kind Cluster
         run: |
