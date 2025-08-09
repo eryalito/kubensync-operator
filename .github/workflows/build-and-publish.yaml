@@ -1,14 +1,8 @@
 name: Build and Publish Operator
 
 on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-    secrets:
-      repo_creds:
-        required: true
+  release:
+    types: [published]
 
 jobs:
   build-and-publish:
@@ -18,7 +12,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: v${{ inputs.version }}
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -34,7 +36,7 @@ jobs:
 
       - name: Build operator
         run: |
-          IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make docker-build docker-push
+          IMG=ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }} make docker-build docker-push
 
       - name: Install Helm
         uses: azure/setup-helm@v4

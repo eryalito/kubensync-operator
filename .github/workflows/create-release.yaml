@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version'
+        description: 'Semantic version for the release (e.g., 1.2.3 or 1.2.3-alpha.1)'
         required: true
 
 jobs:
@@ -54,78 +54,18 @@ jobs:
       - name: Update helm docs
         uses: losisin/helm-docs-github-action@v1
 
-      - name: Configure git
-        run: |
-          git config --local user.email "eryalitobot@gmail.com"
-          git config --local user.name "Eryalito Bot"
-          echo "${{ secrets.SSH_GITHUB }}" > /tmp/id_rsa
-          chmod 600  /tmp/id_rsa
-          git config core.sshCommand 'ssh -i  /tmp/id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-
-      - name: Import GPG key
-        id: import-gpg
-        run: |
-          echo "${{ secrets.GPG_SIGN_64 }}" | base64 --decode | gpg --import
-          gpg --list-secret-keys --keyid-format LONG
-
-      - name: Configure GPG
-        run: |
-          git config --local commit.gpgsign true
-          git config --local user.signingkey $(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
-
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
-        id: cpr
+        uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: Update version to ${{ github.event.inputs.version }}
-          body: Update version to ${{ github.event.inputs.version }}
-          commit-message: Update version to ${{ github.event.inputs.version }}
-          author: Eryalito Bot <eryalitobot@gmail.com>
-          committer: Eryalito Bot <eryalitobot@gmail.com>
-          add-paths: dist/install.yaml,dist/chart/Chart.yaml,dist/chart/values.yaml,dist/chart/README.md
+          commit-message: "chore: Bump version to ${{ github.event.inputs.version }}"
+          title: "Bump version to ${{ github.event.inputs.version }}"
+          body: |
+            This PR bumps the Helm chart version to `${{ github.event.inputs.version }}`.
+
+            Triggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          branch: "release/bump-version-${{ github.event.inputs.version }}"
+          base: ${{ github.ref_name }}
           delete-branch: true
-          labels: 'skip-ci'
-
-    outputs:
-      pr_number: ${{ steps.cpr.outputs.pull-request-number }}
-
-  merge_pr:
-    needs: create_release_pr
-    uses: ./.github/workflows/automerge-release-pr.yaml
-    with:
-      version: ${{ github.event.inputs.version }}
-      pr_number: ${{ needs.create_release_pr.outputs.pr_number }}
-    secrets:
-      repo_creds: ${{ secrets.GITHUB_TOKEN }}
-      pat_creds: ${{ secrets.PAT_GITHUB }}
-
-  tag_and_release:
-    runs-on: ubuntu-latest
-    needs: merge_pr
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: master
-
-      - name: Tag commit
-        run: |
-          git tag v${{ inputs.version }}
-          git push origin v${{ inputs.version }}
-
-      - name: Create GitHub release
-        uses: ncipollo/release-action@v1
-        with:
-          generateReleaseNotes: true
-          tag: v${{ github.event.inputs.version }}
-          name: v${{ github.event.inputs.version }}
-
-  build_and_publish:
-    needs: tag_and_release
-    uses: ./.github/workflows/build-and-publish.yaml
-    with:
-      version: ${{ github.event.inputs.version }}
-    secrets:
-      repo_creds: ${{ secrets.GHCR_TOKEN }}
+          labels: |
+            automated-pr
