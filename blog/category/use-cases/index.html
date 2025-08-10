@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://kubensync.com/blog/category/use-cases/">
       
       
-        <link rel="prev" href="../cluster-api/">
+        <link rel="prev" href="../security/">
       
       
         <link rel="next" href="../../archive/2025/">
@@ -877,11 +877,57 @@
   
   
     <li class="md-nav__item">
+      <a href="../cicd/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CI/CD
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
       <a href="../cluster-api/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Cluster API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
   </span>
   
 
@@ -973,6 +1019,55 @@
       <header class="md-typeset">
         <h1 id="use-cases">Use-cases</h1>
       </header>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+      <nav class="md-post__authors md-typeset">
+        
+          <span class="md-author">
+            <img src="https://avatars.githubusercontent.com/u/91347568" alt="Eryalito">
+          </span>
+        
+      </nav>
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2025-08-10 00:00:00">August 10, 2025</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Use-cases</a>, 
+              <a href="../security/" class="md-meta__link">Security</a>, 
+              <a href="../cicd/" class="md-meta__link">CI/CD</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="dynamically-configuring-rbac-for-cd-workflows"><a class="toclink" href="../../2025/08/10/dynamically-configuring-rbac-for-cd-workflows/">Dynamically configuring RBAC for CD workflows</a></h2>
+<p>Handling RBAC (Role-Based Access Control) in Kubernetes can be challenging, especially when you need to dynamically configure permissions for CD tools that use Service Accounts (SAs) across multiple namespaces. We will explore how to configure dynamic RBAC in a real world scenario, taking <a href="https://argo-cd.readthedocs.io/en/stable/">ArgoCD</a> as an example configuring the necessary permissions for its Service Account in each namespace. This approach can be adapted to other CD tools like <a href="https://fluxcd.io/">FluxCD</a> or <a href="https://www.jenkins.io/">Jenkins</a>.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../2025/08/10/dynamically-configuring-rbac-for-cd-workflows/">
+          Continue reading
+        </a>
+      </nav>
+    
+  </div>
+</article>
       
         <article class="md-post md-post--excerpt">
   <header class="md-post__header">

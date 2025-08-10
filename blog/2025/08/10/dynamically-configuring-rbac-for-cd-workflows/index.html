@@ -8,11 +8,11 @@
       
       
       
-        <link rel="canonical" href="https://kubensync.com/blog/2025/07/15/kubensync-when-using-cluster-api/">
+        <link rel="canonical" href="https://kubensync.com/blog/2025/08/10/dynamically-configuring-rbac-for-cd-workflows/">
       
       
+        <link rel="prev" href="../../../07/15/kubensync-when-using-cluster-api/">
       
-        <link rel="next" href="../../../08/10/dynamically-configuring-rbac-for-cd-workflows/">
       
       
       <link rel="icon" href="../../../../../assets/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>KubeNSync when using Cluster API - KubeNSync</title>
+        <title>Dynamically configuring RBAC for CD workflows - KubeNSync</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#kubensync-when-using-cluster-api" class="md-skip">
+        <a href="#dynamically-configuring-rbac-for-cd-workflows" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              KubeNSync when using Cluster API
+              Dynamically configuring RBAC for CD workflows
             
           </span>
         </div>
@@ -1004,56 +1004,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#use-case-injecting-a-pull-secret-into-guest-clusters" class="md-nav__link">
+  <a href="#the-problem" class="md-nav__link">
     <span class="md-ellipsis">
-      Use case: Injecting a pull secret into guest clusters
+      The problem
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#the-ideal-solution" class="md-nav__link">
     <span class="md-ellipsis">
-      Prerequisites
+      The ideal solution
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#solution" class="md-nav__link">
+  <a href="#the-implementation" class="md-nav__link">
     <span class="md-ellipsis">
-      Solution
+      The implementation
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation" class="md-nav__link">
+  <a href="#conclusion" class="md-nav__link">
     <span class="md-ellipsis">
-      Implementation
+      Conclusion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Conclusion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#benefits" class="md-nav__link">
-    <span class="md-ellipsis">
-      Benefits
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#caveats" class="md-nav__link">
-    <span class="md-ellipsis">
-      Caveats
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1113,7 +1110,7 @@
                     <li class="md-nav__item">
                       <div class="md-nav__link">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 19H5V8h14m-3-7v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1m-1 11h-5v5h5v-5Z"/></svg>
-                        <time datetime="2025-07-15 00:00:00" class="md-ellipsis">July 15, 2025</time>
+                        <time datetime="2025-08-10 00:00:00" class="md-ellipsis">August 10, 2025</time>
                       </div>
                     </li>
                     
@@ -1125,7 +1122,8 @@
                             in
                             
                               <a href="../../../../category/use-cases/">Use-cases</a>, 
-                              <a href="../../../../category/cluster-api/">Cluster API</a></span>
+                              <a href="../../../../category/security/">Security</a>, 
+                              <a href="../../../../category/cicd/">CI/CD</a></span>
                         </div>
                       </li>
                     
@@ -1136,7 +1134,7 @@
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 20a8 8 0 0 0 8-8 8 8 0 0 0-8-8 8 8 0 0 0-8 8 8 8 0 0 0 8 8m0-18a10 10 0 0 1 10 10 10 10 0 0 1-10 10C6.47 22 2 17.5 2 12A10 10 0 0 1 12 2m.5 5v5.25l4.5 2.67-.75 1.23L11 13V7h1.5Z"/></svg>
                           <span class="md-ellipsis">
                             
-                              5 min read
+                              4 min read
                             
                           </span>
                         </div>
@@ -1159,144 +1157,153 @@
   
 
 
-<h1 id="kubensync-when-using-cluster-api">KubeNSync when using Cluster API</h1>
-<p>When managing multiple Kubernetes clusters, using Cluster API (CAPI) for deploying, and ArgoCD, FluxCD or similar tools for deploying applications, is a common scenario. However, managing basic cluster configuration such as CCMs, Pull Secrets, etc. can be hard to manage.</p>
-<p>In these cases, using tools like <a href="https://cluster-api.sigs.k8s.io/tasks/cluster-resource-set">ClusterResourceSet (CRS)</a> or the <a href="https://github.com/kubernetes-sigs/cluster-api-addon-provider-helm">Helm chart provider</a> can help, but they often require additional steps like building the Helm values, injecting secrets, and potentially depending on external tools like some kind of vault.</p>
+<h1 id="dynamically-configuring-rbac-for-cd-workflows">Dynamically configuring RBAC for CD workflows</h1>
+<p>Handling RBAC (Role-Based Access Control) in Kubernetes can be challenging, especially when you need to dynamically configure permissions for CD tools that use Service Accounts (SAs) across multiple namespaces. We will explore how to configure dynamic RBAC in a real world scenario, taking <a href="https://argo-cd.readthedocs.io/en/stable/">ArgoCD</a> as an example configuring the necessary permissions for its Service Account in each namespace. This approach can be adapted to other CD tools like <a href="https://fluxcd.io/">FluxCD</a> or <a href="https://www.jenkins.io/">Jenkins</a>.</p>
 <!-- more -->
 
-<h2 id="use-case-injecting-a-pull-secret-into-guest-clusters">Use case: Injecting a pull secret into guest clusters</h2>
-<p>I faced this problem when deploying air-gapped clusters with a private registry. A pull secret is needed to pull images from the private registry, so there are some options available using <em>traditional</em> methods:</p>
-<ol>
-<li><strong>Using ClusterResourceSet</strong>: You can create a <code>ClusterResourceSet</code> that creates the resources defined on a ConfigMap into the cluster. This is a viable option at first, but it requires to manually create the ConfigMap with the secret and rotating it for each cluster. This implies that the tool deploying the <code>ClusterResourceSet</code> must have access to the secret, which was not my case.</li>
-<li><strong>Using Helm</strong>: The scenario using the Helm chart provider is similar to the previous one, but it requires to create a Helm chart with the secret and deploy it to each cluster. This is also a viable option, but, same as before, it requires to know the secret to provide it on the values.</li>
-<li><strong>Configuring containerd</strong>: Another option could be to configure containerd to use the pull secret by default. This is a more complex solution, as it requires to modify the containerd configuration on each cluster. Anyway, this is not valid not only because I don't have the secret at deploy time, but also because adding the pull secret <em>globally</em> is not a good practice, as any pod in any namespace could download images. Also this would be limited to only one credential per registry, which is not ideal in many cases.</li>
-</ol>
-<p>In summary, I needed a <strong><em>generic</em> solution</strong> that would allow me to <strong>inject arbitrary secrets</strong> into the guest clusters <strong>without knowing them at deploy time</strong>, they are already present on the host cluster and their contents might change so <strong>it needs to be synchronized</strong>. This is where KubeNSync comes into play.</p>
-<h2 id="prerequisites">Prerequisites</h2>
-<p>Before we begin, ensure you have the following prerequisites:</p>
+<h2 id="the-problem">The problem</h2>
+<p>When using tools like ArgoCD, you often setup a Cluster <a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#clusters">using some kind of credentials</a> (or kubeconfig), usually a Service Account. Normally this Service Account is granted cluster-admin permissions, which is not recommended on production environments. This is particularly problematic when teams have access to the CD tool to deploy and manage applications themselves. Leaving cluster-admin permissions allows them to modify any resource, including core Kubernetes resources: CoreDNS, Node, Secrets, etc.</p>
+<h2 id="the-ideal-solution">The ideal solution</h2>
+<p>The ideal solution in this scenarios is to provide the CD tools with the minimum permissions required to deploy and manage only the applications and their related resources. In general, this means creating RoleBindings on the destination namespaces allowing the creation and management of resources.</p>
+<p>Being more specific, the desired scenario we're going to focus on is:</p>
 <ul>
-<li>A Kubernetes cluster set up with Cluster API.</li>
-<li>KubeNSync operator installed on your host cluster.</li>
-<li>Guest clusters created and managed by Cluster API.</li>
+<li>A CD tool (ArgoCD for the example) is configured with a Service Account.</li>
+<li>The Service Account has permission to fully manage all resources in the application namespaces.</li>
+<li>The application namespaces are distinguished by a label, e.g. <code>namespace-type: application</code>.</li>
 </ul>
-<h2 id="solution">Solution</h2>
-<p>The overall idea is to use KubeNSync to synchronize a pull secret stored in the host cluster to the guest clusters, using as few pieces as possible. For achieving this, I decided to go with the ClusterResourceSet approach as it's CAPI-native and no addons are required. The steps are as follows:</p>
-<ol>
-<li>The <code>source-pull-secret</code> is a Secret in the <code>kube-system</code> namespace of the host cluster. It's referenced by a <code>ManagedResource</code>.</li>
-<li>The <code>ManagedResource</code> creates a <code>Secret</code> and <code>ClusterResourceSet</code> on each guest cluster namespace.</li>
-<li>The CAPI controller will process the <code>ClusterResourceSet</code> and get the resources defined on the <code>Secret</code>.</li>
-<li>The CAPI controller will create a Secret in the <code>kube-system</code> namespace of the guest cluster.</li>
-</ol>
-<pre class="mermaid"><code>graph TD
-    subgraph Host Cluster
-        subgraph kube-system namespace
-            A["source-pull-secret&lt;br&gt;(Secret)"]
-        end
-        subgraph ClusterScoped resources
-            B["capi-pull-secret&lt;br&gt;(ManagedResource)"]
-        end
-        A -- "(1) Referenced by" --&gt; B
-        subgraph capi-cluster-1 namespace
-            B -- "(2) Creates" --&gt; C("crs-pull-secret&lt;br&gt;(Secret)")
-            B -- "(2) Creates" --&gt; D("crs-pull-secret&lt;br&gt;(ClusterResourceSet)")
-        end
-        D -- "(3) Managed by" --&gt; E["CAPI&lt;br&gt;Controller"]
-    end
-    subgraph Cluster-1 Cluster
-        E -- "(4) Creates Secret" --&gt; F["pull-secret&lt;br&gt;(kube-system)"]
-    end</code></pre>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The flow assumes that each guest cluster resources live in their own namespace. This is not strictly necessary, but it is a common practice when using Cluster API.</p>
+<p>This is a simplified scenario and it assumes that someone (usually a cluster administrator or DevOps team) have already created the namespaces with the appropriate labels.</p>
 </div>
-<h2 id="implementation">Implementation</h2>
-<p>First of all, we need to create the <code>source-pull-secret</code> in the host cluster. This is a Secret that contains the pull secret that we want to synchronize to the guest clusters.</p>
-<div class="language-yaml highlight"><span class="filename">source-pull-secret.yaml</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source-pull-secret</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kubernetes.io/dockerconfigjson</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">data</span><span class="p">:</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">.dockerconfigjson</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;base64-encoded-pull-secret&gt;</span>
-</span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>source-pull-secret.yaml
-</span></code></pre></div>
-<p>Now, we need to create the <code>ManagedResource</code> that will create the <code>Secret</code> and <code>ClusterResourceSet</code> on each guest cluster namespace. This is done by creating a <code>ManagedResource</code> that references the <code>source-pull-secret</code> and uses a label to identify the CAPI namespaces.</p>
-<div class="language-yaml highlight"><span class="filename">capi-pull-secret.yaml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">automation.kubensync.com/v1alpha1</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ManagedResource</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">metadata</span><span class="p">:</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">capi-pull-secret</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">spec</span><span class="p">:</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">namespaceSelector</span><span class="p">:</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">labelSelector</span><span class="p">:</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">matchLabels</span><span class="p">:</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="nt">capi-pull-secret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">template</span><span class="p">:</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nt">data</span><span class="p">:</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pull_secret</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="nt">ref</span><span class="p">:</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source-pull-secret</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">          </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="nt">literal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">      </span><span class="no">---</span>
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="no">apiVersion: v1</span>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">      </span><span class="no">kind: Secret</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">      </span><span class="no">metadata:</span>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">        </span><span class="no">name: crs-pull-secret</span>
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">        </span><span class="no">namespace: {{ .Namespace.Name }}</span>
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">      </span><span class="no">type: addons.cluster.x-k8s.io/resource-set</span>
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">      </span><span class="no">stringData:</span>
-</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">        </span><span class="no">manifests.yaml: |</span>
-</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">          </span><span class="no">---</span>
-</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">          </span><span class="no">apiVersion: v1</span>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">          </span><span class="no">data:</span>
-</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">            </span><span class="no">.dockerconfigjson: &#39;{{ index .Data.pull_secret &quot;.dockerconfigjson&quot; | base64Encode }}&#39;</span>
-</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">          </span><span class="no">kind: Secret</span>
-</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">          </span><span class="no">metadata:</span>
-</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">            </span><span class="no">name: pull-secret</span>
-</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">            </span><span class="no">namespace: kube-system</span>
-</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">          </span><span class="no">type: kubernetes.io/dockerconfigjson</span>
-</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">      </span><span class="no">---</span>
-</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">      </span><span class="no">apiVersion: addons.cluster.x-k8s.io/v1beta1</span>
-</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">      </span><span class="no">kind: ClusterResourceSet</span>
-</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">      </span><span class="no">metadata:</span>
-</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">        </span><span class="no">name: crs-pull-secret</span>
-</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">        </span><span class="no">namespace: {{ .Namespace.Name }}</span>
-</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">      </span><span class="no">spec:</span>
-</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">        </span><span class="no">clusterSelector:</span>
-</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">          </span><span class="no">matchLabels:</span>
-</span><span id="__span-2-45"><a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">            </span><span class="no">cluster.x-k8s.io/cluster-name: {{ .Namespace.Name }}</span>
-</span><span id="__span-2-46"><a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">        </span><span class="no">resources:</span>
-</span><span id="__span-2-47"><a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">        </span><span class="no">- kind: Secret</span>
-</span><span id="__span-2-48"><a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">          </span><span class="no">name: crs-pull-secret</span>
-</span><span id="__span-2-49"><a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">        </span><span class="no">strategy: Reconcile</span>
-</span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>capi-pull-secret.yaml
-</span></code></pre></div>
-<p>And this is almost everything! The <code>ManagedResource</code> will create the <code>Secret</code> and <code>ClusterResourceSet</code> on each guest cluster namespace that matches the label selector. The CAPI controller will then process the <code>ClusterResourceSet</code> and create the <code>pull-secret</code> in the <code>kube-system</code> namespace of each guest cluster.</p>
-<h2 id="benefits">Benefits</h2>
-<p>With this approach all of the points mentioned in the use case are covered:</p>
-<ul>
-<li><strong>Generic solution</strong>: The <code>ManagedResource</code> can be used to synchronize any secret, not just pull secrets. Any resource for that matter.</li>
-<li><strong>Secret value agnostic</strong>: Both the <code>source-pull-secret</code> Secret and <code>capi-pull-secret</code> ManagedResource can be created beforehand, so we don't need to know its value at deploy time.</li>
-<li><strong>Synchronization</strong>: The <code>ManagedResource</code> will automatically synchronize the <code>source-pull-secret</code> to the <code>crs-pull-secret</code>, and CAPI will update it on the guest clusters.</li>
-</ul>
-<h2 id="caveats">Caveats</h2>
-<p>There are a few caveats to keep in mind when using this approach:</p>
-<ul>
+<h2 id="the-implementation">The implementation</h2>
+<p>To achieve this, only one ManagedResource is really needed, which will create a RoleBinding in each namespace with the label <code>namespace-type: application</code>. The RoleBinding will grant the necessary permissions to the Service Account used by the CD tool.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>ArgoCD could use the <code>in-cluster</code> config with its own service account, but for this example we will create a separate Service Account for the CD tool so it's extensible for external clusters too. If you want to use the in-cluster config, you can skip to point 5.</p>
+</div>
+<ol>
 <li>
-<p>This solution assumes that the guest clusters resources are created in their own namespaces and the namespace name matches the cluster name.</p>
+<p>For simplicity's sake, we will use the <code>kube-system</code> namespace for the Service Account, but you can use any other namespace.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
+</span></code></pre></div>
+</li>
+<li>
+<p>For being able to import the Service Account into ArgoCD we need to create a long-lived Secret with the Service Account token:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa-token</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">kubernetes.io/service-account.name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kubernetes.io/service-account-token</span>
+</span></code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>If this is not the case, you might need to adjust both the <code>namespaceSelector</code> in the ManagedResource spec and the <code>clusterSelector</code> in the ClusterResourceSet spec to match your actual environment.</p>
+<p>You can use short-lived tokens, but they will require to be refreshed periodically. This could be done using <code>ManagedResources</code> to update the Secret with a new token, but for simplicity we will use a long-lived token.</p>
 </div>
 </li>
 <li>
-<p>The <code>ManagedResource</code> will create a <code>ClusterResourceSet</code> only in the namespaces that match the label selector. So you have to ensure that the namespaces where you want to deploy the pull secret have the label <code>capi-pull-secret: "true"</code>.</p>
+<p>Now we can retrieve the token from the Secret and use it to configure the credentials in ArgoCD:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>argocd-sa-token<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.token}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>--decode
+</span></code></pre></div>
 </li>
-</ul>
+<li>
+<p>With the Service Account token register the cluster in ArgoCD:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mycluster-secret</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">argocd.argoproj.io/secret-type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cluster</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mycluster.example.com</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">server</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://mycluster.example.com</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="no">{</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="no">&quot;bearerToken&quot;: &quot;&lt;serviceaccount token&gt;&quot;,</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span><span class="no">&quot;tlsClientConfig&quot;: {</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">        </span><span class="no">&quot;insecure&quot;: false,</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="no">&quot;caData&quot;: &quot;&lt;base64 encoded certificate&gt;&quot;</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">      </span><span class="no">}</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="no">}</span>
+</span></code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The <code>caData</code> is optional if the cluster uses a public CA or if you trust the cluster's certificate. Also you could set <code>insecure</code> to <code>true</code> if you want to skip certificate verification, but this is not recommended for production environments.</p>
+</div>
+</li>
+<li>
+<p>Once the service account is configured, we have to configure some cluster-read permissions for the Service Account so ArgoCD can populate the caches:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nn">---</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io/v1</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRole</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-read</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nt">rules</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;*&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;*&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;get&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;list&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;watch&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="nn">---</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io/v1</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRoleBinding</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa-read</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="nt">roleRef</span><span class="p">:</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">  </span><span class="nt">apiGroup</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRole</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-read</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="nt">subjects</span><span class="p">:</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">    </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
+</span></code></pre></div>
+</li>
+<li>
+<p>Until this point ArgoCD can connect and read resources from the cluster, but can't deploy anything. For that, only one <code>ManagedResource</code> is needed, it will create the RoleBinding in each namespace with the label <code>namespace-type: application</code> providing <code>edit</code> permissions.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">automation.kubensync.com/v1alpha1</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ManagedResource</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-dynamic-rbac</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">namespaceSelector</span><span class="p">:</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">labelSelector</span><span class="p">:</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">matchLabels</span><span class="p">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nt">namespace-type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">application</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="nt">data</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="nt">ref</span><span class="p">:</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argocd-sa</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">          </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kube-system</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nt">literal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">      </span><span class="no">---</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">      </span><span class="no">apiVersion: rbac.authorization.k8s.io/v1</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">      </span><span class="no">kind: RoleBinding</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">      </span><span class="no">metadata:</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">        </span><span class="no">name: argocd-rolebinding</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">        </span><span class="no">namespace: {{ .Namespace.Name }}</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">      </span><span class="no">subjects:</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">        </span><span class="no">- kind: ServiceAccount</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">          </span><span class="no">name: argocd-sa</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">          </span><span class="no">namespace: kube-system</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">      </span><span class="no">roleRef:</span>
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">        </span><span class="no">kind: ClusterRole</span>
+</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">        </span><span class="no">name: edit</span>
+</span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="w">        </span><span class="no">apiGroup: rbac.authorization.k8s.io</span>
+</span></code></pre></div>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>Using <code>ManagedResources</code> to dynamically configure RBAC for CD tools like ArgoCD is a viable and effective solution. It allows to automate the permission management allowing the tool to deploy only on the desired namespaces without granting cluster-wide admin permissions. This approach can be adapted to other CD tools like FluxCD or Jenkins, providing a flexible and secure way to manage permissions in Kubernetes clusters.</p>
+<h3 id="limitations">Limitations</h3>
+<p>This solution assumes standard application deployments containing only basic deployments (Deployments, StatefulSets, etc.) and services. If your applications require more complex deployments, such as custom resources, cluster-scoped resources, or specific permissions, you may need to extend the <code>RoleBinding</code> or create additional <code>ManagedResources</code> to cover those cases.</p>
 <p>This work is licensed under a <a href="/blog/LICENSE">Creative Commons Attribution 4.0 International License</a>.</p>
 
 
