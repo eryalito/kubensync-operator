@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/eryalito/kubensync-operator
-  newTag: e2e-0.0.0
+  newTag: 0.9.2
