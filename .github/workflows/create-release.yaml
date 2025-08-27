@@ -66,6 +66,7 @@ jobs:
             Triggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           branch: "release/bump-version-${{ github.event.inputs.version }}"
           base: ${{ github.ref_name }}
+          add-paths: dist/install.yaml,dist/chart/Chart.yaml,dist/chart/values.yaml,dist/chart/README.md
           delete-branch: true
           labels: |
             automated-pr
