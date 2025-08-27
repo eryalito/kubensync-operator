@@ -71,4 +71,4 @@ certmanager:
 networkPolicy:
   enable: false
 image:
-  tag: 0.9.1
+  tag: 0.9.2
