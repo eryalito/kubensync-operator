@@ -25,6 +25,10 @@ spec:
         {{- end }}
         {{- end }}
     spec:
+      {{- with .Values.controllerManager.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: manager
           args:
