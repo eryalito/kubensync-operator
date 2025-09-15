@@ -28,7 +28,7 @@ Grant Permissions:
 
 Install the operator using the Helm chart:
 
-    helm install kubensync oci://ghcr.io/eryalito/kubensync-charts/kubensync --version 0.9.0 -n kubensync-system --create-namespace --wait
+    helm install kubensync oci://ghcr.io/eryalito/kubensync-charts/kubensync --version 0.9.4 -n kubensync-system --create-namespace --wait
 
 !!! info "Helm Chart"
     To get more information about the Helm chart, check the [Helm Chart documentation](https://github.com/eryalito/kubensync-operator/tree/master/dist/chart)
