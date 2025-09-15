@@ -51,6 +51,10 @@ jobs:
           echo "Successfully updated $CHART_FILE:"
           cat "$CHART_FILE"
 
+          echo "Updating $VALUES_FILE to version $NEW_VERSION..."
+          yq e ".controllerManager.container.image,tag = \"$NEW_VERSION\"" -i "$VALUES_FILE"
+          echo "Successfully updated $VALUES_FILE"
+
       - name: Update helm docs
         uses: losisin/helm-docs-github-action@v1
 
