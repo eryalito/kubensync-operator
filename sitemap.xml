@@ -2,122 +2,137 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://kubensync.com/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/2025/07/15/kubensync-when-using-cluster-api/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/2025/08/10/dynamically-configuring-rbac-for-cd-workflows/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/examples/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/examples/pull-secret/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/examples/quota/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/examples/rbac-handling/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/examples/service-account/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/getting-started/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/reference/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/reference/selectors/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/reference/template-data/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/reference/template-functions/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/reference/template/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/usage/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/versions/v0.8.0/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/versions/v0.9.0/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/versions/v0.9.1/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://kubensync.com/versions/v0.9.2/</loc>
+         <lastmod>2025-09-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://kubensync.com/versions/v0.9.3/</loc>
+         <lastmod>2025-09-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://kubensync.com/versions/v0.9.4/</loc>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/archive/2025/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/category/use-cases/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/category/security/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/category/cicd/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://kubensync.com/blog/category/cluster-api/</loc>
-         <lastmod>2025-08-10</lastmod>
+         <lastmod>2025-09-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
