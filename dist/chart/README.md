@@ -1,6 +1,6 @@
 # kubensync
 
-![Version: 0.9.2](https://img.shields.io/badge/Version-0.9.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.9.2](https://img.shields.io/badge/AppVersion-0.9.2-informational?style=flat-square)
+![Version: 0.9.3](https://img.shields.io/badge/Version-0.9.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.9.3](https://img.shields.io/badge/AppVersion-0.9.3-informational?style=flat-square)
 
 A Helm chart to distribute the kubensync operator.
 
@@ -25,7 +25,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.container.args[1] | string | `"--metrics-bind-address=:8443"` |  |
 | controllerManager.container.args[2] | string | `"--health-probe-bind-address=:8081"` |  |
 | controllerManager.container.image.repository | string | `"ghcr.io/eryalito/kubensync-operator"` |  |
-| controllerManager.container.image.tag | string | `"0.8.0"` |  |
+| controllerManager.container.image.tag | string | `"0.9.3"` |  |
 | controllerManager.container.imagePullPolicy | string | `"IfNotPresent"` |  |
 | controllerManager.container.livenessProbe.httpGet.path | string | `"/healthz"` |  |
 | controllerManager.container.livenessProbe.httpGet.port | int | `8081` |  |
@@ -48,7 +48,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.terminationGracePeriodSeconds | int | `10` |  |
 | crd.enable | bool | `true` |  |
 | crd.keep | bool | `true` |  |
-| image.tag | string | `"0.9.2"` |  |
+| image.tag | string | `"0.9.3"` |  |
 | metrics.enable | bool | `true` |  |
 | networkPolicy.enable | bool | `false` |  |
 | prometheus.enable | bool | `false` |  |
