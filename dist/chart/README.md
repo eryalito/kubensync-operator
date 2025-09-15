@@ -1,6 +1,6 @@
 # kubensync
 
-![Version: 0.9.3](https://img.shields.io/badge/Version-0.9.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.9.3](https://img.shields.io/badge/AppVersion-0.9.3-informational?style=flat-square)
+![Version: 0.9.4](https://img.shields.io/badge/Version-0.9.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.9.4](https://img.shields.io/badge/AppVersion-0.9.4-informational?style=flat-square)
 
 A Helm chart to distribute the kubensync operator.
 
@@ -25,7 +25,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.container.args[1] | string | `"--metrics-bind-address=:8443"` |  |
 | controllerManager.container.args[2] | string | `"--health-probe-bind-address=:8081"` |  |
 | controllerManager.container.image.repository | string | `"ghcr.io/eryalito/kubensync-operator"` |  |
-| controllerManager.container.image.tag | string | `"0.9.3"` |  |
+| controllerManager.container.image.tag | string | `"0.9.4"` |  |
 | controllerManager.container.imagePullPolicy | string | `"IfNotPresent"` |  |
 | controllerManager.container.livenessProbe.httpGet.path | string | `"/healthz"` |  |
 | controllerManager.container.livenessProbe.httpGet.port | int | `8081` |  |
@@ -41,6 +41,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.container.resources.requests.memory | string | `"64Mi"` |  |
 | controllerManager.container.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | controllerManager.container.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| controllerManager.imagePullSecrets | list | `[]` |  |
 | controllerManager.replicas | int | `1` |  |
 | controllerManager.securityContext.runAsNonRoot | bool | `true` |  |
 | controllerManager.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
@@ -48,7 +49,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.terminationGracePeriodSeconds | int | `10` |  |
 | crd.enable | bool | `true` |  |
 | crd.keep | bool | `true` |  |
-| image.tag | string | `"0.9.3"` |  |
+| image.tag | string | `"0.9.4"` |  |
 | metrics.enable | bool | `true` |  |
 | networkPolicy.enable | bool | `false` |  |
 | prometheus.enable | bool | `false` |  |
