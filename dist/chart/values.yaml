@@ -4,7 +4,7 @@ controllerManager:
   container:
     image:
       repository: ghcr.io/eryalito/kubensync-operator
-      tag: 0.8.0
+      tag: 0.9.3
     imagePullPolicy: IfNotPresent
     args:
       - "--leader-elect"
@@ -71,4 +71,4 @@ certmanager:
 networkPolicy:
   enable: false
 image:
-  tag: 0.9.2
+  tag: 0.9.3
