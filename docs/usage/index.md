@@ -87,4 +87,4 @@ spec:
 
 ## Examples
 
-Check out some real-world use cases of kubensync in the [examples](./examples) section. Here are some examples of how to use the `ManagedResource` kind:
+Check out some real-world use cases of kubensync in the [examples](../examples/index.md) section. Here are some examples of how to use the `ManagedResource` kind:

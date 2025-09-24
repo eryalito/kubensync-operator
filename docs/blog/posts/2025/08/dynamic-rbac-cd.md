@@ -169,4 +169,4 @@ Using `ManagedResources` to dynamically configure RBAC for CD tools like ArgoCD 
 
 This solution assumes standard application deployments containing only basic deployments (Deployments, StatefulSets, etc.) and services. If your applications require more complex deployments, such as custom resources, cluster-scoped resources, or specific permissions, you may need to extend the `RoleBinding` or create additional `ManagedResources` to cover those cases.
 
-This work is licensed under a [Creative Commons Attribution 4.0 International License](/blog/LICENSE).
+This work is licensed under a [Creative Commons Attribution 4.0 International License](../../../LICENSE).
