@@ -20,6 +20,7 @@ jobs:
           - "1.30"
           - "1.31"
           - "1.32"
+          - "1.33"
     steps:
       - name: Clone the code
         uses: actions/checkout@v4
@@ -32,6 +33,7 @@ jobs:
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.12.0
         with:
+          version: v0.30.0
           cluster_name: e2e-test
           node_image: kindest/node:v${{ matrix.k8s_version }}.0
 
