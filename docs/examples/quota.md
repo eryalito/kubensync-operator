@@ -30,5 +30,5 @@ spec:
                     cpu: "4"
 ```
 
-1.  !!! warning
+1. !!! warning
     As Go regex stdlib does not support negative lookaheads the negative expressions is a bit funny. It would be `^(?!kube-).*`.

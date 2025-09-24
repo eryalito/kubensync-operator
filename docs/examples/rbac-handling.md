@@ -57,4 +57,3 @@ spec:
                 name: my-role
                 apiGroup: rbac.authorization.k8s.io
 ```
-

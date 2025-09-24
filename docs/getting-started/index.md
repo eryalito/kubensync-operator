@@ -35,7 +35,7 @@ Install the operator using the Helm chart:
 
 ## Uninstallation
 
-### Using kubectl
+### With kubectl
 
 Delete the operator:
 
@@ -45,7 +45,7 @@ Delete Permissions:
 
     kubectl delete -f https://raw.githubusercontent.com/eryalito/kubensync-operator/master/dist/rbac.yaml
 
-### Using Helm
+### With Helm
 
 Uninstall the operator using Helm:
 
