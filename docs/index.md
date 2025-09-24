@@ -41,7 +41,7 @@ Ready to dive in? Follow these steps to get started with KubeNSync:
 
 Explore the documentation to learn more:
 
-- [Get Started](getting-started)
-- [Usage](usage)
-- [Reference](reference)
-- [Examples](examples)
+- [Get Started](getting-started/index.md)
+- [Usage](usage/index.md)
+- [Reference](reference/index.md)
+- [Examples](examples/index.md)

@@ -166,4 +166,4 @@ There are a few caveats to keep in mind when using this approach:
 
 - The `ManagedResource` will create a `ClusterResourceSet` only in the namespaces that match the label selector. So you have to ensure that the namespaces where you want to deploy the pull secret have the label `capi-pull-secret: "true"`.
 
-This work is licensed under a [Creative Commons Attribution 4.0 International License](/blog/LICENSE).
+This work is licensed under a [Creative Commons Attribution 4.0 International License](../../../LICENSE).

@@ -4,7 +4,7 @@ Once the kubensync operator is installed, you can start using it by defining cus
 
 ## ManagedResource
 
-The ManagedResource kind allows users to define a template to apply for each selected namespace. 
+The ManagedResource kind allows users to define a template to apply for each selected namespace.
 
 ``` { .yaml }
 apiVersion: automation.kubensync.com/v1alpha1
@@ -37,47 +37,49 @@ spec:
                 .dockerconfigjson: '{{ index .Data.pull_secret ".dockerconfigjson" | base64Encode }}'
 ```
 
-1.  !!! tip 
+1. !!! tip
     You can read as many secrets or configmaps as you need, even if they are duplicates. Just keep in mind that name should be unique.
 
-2.  !!! info 
+2. !!! info
     This will be the value used on the template
 
 3. !!! info
    Select namespaces based on labels.
 
 4. !!! info
-   ```
-   DESCRIPTION:
-   matchLabels is a map of {key,value} pairs. A single {key,value} in the
-   matchLabels map is equivalent to an element of matchExpressions, whose key
-   field is "key", the operator is "In", and the values array contains only
-   "value". The requirements are ANDed.
-   ```
+
+    ``` text
+    DESCRIPTION:
+      matchLabels is a map of {key,value} pairs. A single {key,value} in the
+      matchLabels map is equivalent to an element of matchExpressions, whose key
+      field is "key", the operator is "In", and the values array contains only
+      "value". The requirements are ANDed.
+    ```
 
 5. !!! info
-   ```
-   DESCRIPTION:
-   matchExpressions is a list of label selector requirements. The requirements
-   are ANDed.
 
-   A label selector requirement is a selector that contains values, a key, and
-   an operator that relates the key and values.
+    ``` text
+    DESCRIPTION:
+      matchExpressions is a list of label selector requirements. The requirements
+      are ANDed.
 
-   FIELDS:
-   key  <string> -required-
-     key is the label key that the selector applies to.
+      A label selector requirement is a selector that contains values, a key, and
+      an operator that relates the key and values.
 
-   operator     <string> -required-
-     operator represents a key's relationship to a set of values. Valid
-     operators are In, NotIn, Exists and DoesNotExist.
+    FIELDS:
+      key  <string> -required-
+        key is the label key that the selector applies to.
 
-   values       <[]string>
-     values is an array of string values. If the operator is In or NotIn, the
-     values array must be non-empty. If the operator is Exists or DoesNotExist,
-     the values array must be empty. This array is replaced during a strategic
-     merge patch.
-   ```
+      operator     <string> -required-
+        operator represents a key's relationship to a set of values. Valid
+        operators are In, NotIn, Exists and DoesNotExist.
+
+      values       <[]string>
+        values is an array of string values. If the operator is In or NotIn, the
+        values array must be non-empty. If the operator is Exists or DoesNotExist,
+        the values array must be empty. This array is replaced during a strategic
+        merge patch.
+    ```
 
 !!! question
     - `avoidResourceUpdate`: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is `false`.
@@ -87,4 +89,4 @@ spec:
 
 ## Examples
 
-Check out some real-world use cases of kubensync in the [examples](./examples) section. Here are some examples of how to use the `ManagedResource` kind:
+Check out some real-world use cases of kubensync in the [examples](../examples/index.md) section.
