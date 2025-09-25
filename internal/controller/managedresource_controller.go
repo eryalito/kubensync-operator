@@ -18,15 +18,19 @@ package controller
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
@@ -176,6 +180,49 @@ func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&automationv1alpha1.ManagedResource{}).
+		// Watch Namespaces and enqueue ManagedResources that match the namespace selector
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToManagedResources)).
 		Named("managedresource").
 		Complete(r)
+}
+
+// mapNamespaceToManagedResources lists ManagedResources and returns reconcile requests for those whose selector matches the namespace.
+func (r *ManagedResourceReconciler) mapNamespaceToManagedResources(ctx context.Context, obj client.Object) []reconcile.Request {
+	ns, ok := obj.(*corev1.Namespace)
+	if !ok {
+		return nil
+	}
+	// List all ManagedResources (optimize later with index if needed)
+	mrList := &automationv1alpha1.ManagedResourceList{}
+	if err := r.List(ctx, mrList); err != nil {
+		managedResourceController.Error(err, "listing ManagedResources for namespace event", "namespace", ns.Name)
+		return nil
+	}
+	var reqs []reconcile.Request
+	for _, mr := range mrList.Items {
+		if namespaceMatchesMR(ns, &mr) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: mr.Name}})
+		}
+	}
+	return reqs
+}
+
+// mapNamespaceToManagedResources lists MRs and enqueues those whose selector matches this namespace.
+// namespaceMatchesMR replicates the selector logic quickly (regex + label selector if defined).
+func namespaceMatchesMR(ns *corev1.Namespace, mr *automationv1alpha1.ManagedResource) bool {
+	sel := mr.Spec.NamespaceSelector
+	// Label selector check
+	if len(sel.LabelSelector.MatchLabels) > 0 || len(sel.LabelSelector.MatchExpressions) > 0 {
+		ls, err := metav1.LabelSelectorAsSelector(&sel.LabelSelector)
+		if err != nil || !ls.Matches(labels.Set(ns.Labels)) {
+			return false
+		}
+	}
+	if sel.Regex != "" {
+		matched, err := regexp.MatchString(sel.Regex, ns.Name)
+		if err != nil || !matched {
+			return false
+		}
+	}
+	return true
 }

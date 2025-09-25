@@ -1,23 +1,17 @@
 package controller
 
 import (
-	// Import necessary packages
-
 	"context"
-	"log"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
-	"github.com/eryalito/kubensync-operator/internal/kube"
-	"github.com/eryalito/kubensync-operator/internal/reconciler"
 )
 
 // NamespaceController reconciles Custom Resources and responds to namespace events.
@@ -29,70 +23,50 @@ type NamespaceController struct {
 
 var namespaceControllerLogger = ctrl.Log.WithName("namespace_controller")
 
+// Annotation used to nudge ManagedResource reconciliations when a Namespace event occurs
+const NamespaceEventAnnotation = "kubensync.com/last-namespace-event"
+
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 
+// Reconcile patches matching ManagedResources with a timestamp annotation to trigger their own full aggregation reconcile.
 func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	// Handle the namespace event here
-	namespaceControllerLogger.Info("Reconciling Namespace", "name", req.Name)
 	ns := &corev1.Namespace{}
-	err := r.Get(ctx, req.NamespacedName, ns)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Object not found, which means it was deleted
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, err
-	} else if ns.DeletionTimestamp != nil {
-		// Object is being deleted
-		return reconcile.Result{}, nil
+	if err := r.Get(ctx, req.NamespacedName, ns); err != nil {
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
-	err = reconcileNamespace(ctx, r.config, ns)
-	if err != nil {
-		return ctrl.Result{}, err
+
+	mrList := &automationv1alpha1.ManagedResourceList{}
+	if err := r.List(ctx, mrList); err != nil {
+		return reconcile.Result{}, err
+	}
+	stamp := time.Now().UTC().Format(time.RFC3339Nano)
+	changed := 0
+	for i := range mrList.Items {
+		mr := &mrList.Items[i]
+		if namespaceMatchesMR(ns, mr) {
+			if mr.Annotations == nil {
+				mr.Annotations = map[string]string{}
+			}
+			if mr.Annotations[NamespaceEventAnnotation] == stamp {
+				continue
+			}
+			mr.Annotations[NamespaceEventAnnotation] = stamp
+			if err := r.Update(ctx, mr); err != nil {
+				namespaceControllerLogger.Error(err, "failed to patch ManagedResource for namespace event", "mr", mr.Name, "namespace", ns.Name)
+				continue
+			}
+			changed++
+		}
+	}
+	if changed > 0 {
+		namespaceControllerLogger.Info("Triggered ManagedResource reconciles due to namespace event", "namespace", ns.Name, "managedResources", changed)
 	}
 	return reconcile.Result{}, nil
 }
 
-// Watch for Namespace events.
 func (r *NamespaceController) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Namespace{}).
 		Complete(r)
-}
-
-func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *corev1.Namespace) error {
-	var err error
-	var mrDefList automationv1alpha1.ManagedResourceList
-	rdr := reconciler.Reconciler{RestConfig: config}
-
-	rdr.Clientset, err = kubernetes.NewForConfig(config)
-
-	if err != nil {
-		return err
-	}
-
-	reconciler.Mutex.Lock()
-	defer reconciler.Mutex.Unlock()
-	mrDefList, err = kube.GetManagedResources(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, mrDef := range mrDefList.Items {
-		originalMRDef := mrDef.DeepCopy()
-		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
-		if err != nil {
-			return err
-		}
-		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
-			log.Printf("Updating status for %s", newMRDef.Name)
-			err = kube.UpdateStatus(newMRDef, ctx)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
