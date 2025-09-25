@@ -18,8 +18,10 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -70,7 +72,29 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	err = reconcileManagedResource(ctx, r.config, mr)
 	if err != nil {
+		// Set Ready condition to False with reason Error
+		setCondition(&mr.Status, metav1.Condition{
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			LastTransitionTime: metav1.NewTime(time.Now()),
+			Reason:             "ReconcileError",
+			Message:            err.Error(),
+			ObservedGeneration: mr.GetGeneration(),
+		})
+		// try to update status ignoring further errors, but return original err
+		_ = r.Status().Update(ctx, mr)
 		return ctrl.Result{}, err
+	}
+	setCondition(&mr.Status, metav1.Condition{
+		Type:               "Ready",
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		Reason:             "Reconciled",
+		Message:            "ManagedResource successfully reconciled",
+		ObservedGeneration: mr.GetGeneration(),
+	})
+	if updateErr := r.Status().Update(ctx, mr); updateErr != nil {
+		return ctrl.Result{}, updateErr
 	}
 	return ctrl.Result{}, nil
 }
@@ -131,6 +155,20 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 
 	return nil
 
+}
+
+// setCondition adds or updates a condition in the status slice
+func setCondition(status *automationv1alpha1.ManagedResourceStatus, condition metav1.Condition) {
+	// remove existing of same type
+	newConds := []metav1.Condition{}
+	for _, c := range status.Conditions {
+		if c.Type == condition.Type {
+			continue
+		}
+		newConds = append(newConds, c)
+	}
+	newConds = append(newConds, condition)
+	status.Conditions = newConds
 }
 
 // SetupWithManager sets up the controller with the Manager.

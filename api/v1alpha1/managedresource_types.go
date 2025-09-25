@@ -96,11 +96,16 @@ type CreatedResource struct {
 // ManagedResourceStatus defines the observed state of ManagedResource
 type ManagedResourceStatus struct {
 	CreatedResources []CreatedResource `json:"createdResources,omitempty"`
+	// Conditions represent the latest available observations of an object's state.
+	// Standard condition types are: Ready
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=mr
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // ManagedResource is the Schema for the managedresources API.
 type ManagedResource struct {
