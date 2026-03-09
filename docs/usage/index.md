@@ -87,6 +87,32 @@ spec:
     - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
     - `template.data`: Optional field that read Kubernetes resources and expose their contents to be used in the `template` under `.Data.<name>`.
 
+## Status
+
+After reconciliation, the operator updates the `status` of the `ManagedResource` with the list of resources it has created and a `Ready` condition that reflects the outcome.
+
+```bash
+kubectl get mr
+```
+
+```
+NAME                    READY   AGE
+managedresource-sample  True    5m
+```
+
+The `Ready` condition has the following possible values:
+
+| Status | Reason | Meaning |
+|--------|--------|---------|
+| `True` | `Synced` | All resources were successfully created or updated across all matching namespaces. |
+| `False` | `ReconcileError` | An error occurred during reconciliation. Check the `message` field for details. |
+
+You can inspect the full condition with:
+
+```bash
+kubectl get mr managedresource-sample -o jsonpath='{.status.conditions[?(@.type=="Ready")]}'
+```
+
 ## Examples
 
 Check out some real-world use cases of kubensync in the [examples](../examples/index.md) section.
