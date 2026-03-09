@@ -1,13 +1,10 @@
 package controller
 
 import (
-	// Import necessary packages
-
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,7 +19,6 @@ import (
 // NamespaceController reconciles Custom Resources and responds to namespace events.
 type NamespaceController struct {
 	client.Client
-	Scheme *runtime.Scheme
 	config *rest.Config
 }
 

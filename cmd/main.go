@@ -203,7 +203,6 @@ func main() {
 
 	if err = (&controller.ManagedResourceReconciler{
 		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ManagedResource")
 		os.Exit(1)
@@ -212,7 +211,6 @@ func main() {
 
 	if err = (&controller.NamespaceController{
 		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Namespaces")
 		os.Exit(1)

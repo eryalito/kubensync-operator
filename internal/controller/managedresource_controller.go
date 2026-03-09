@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,7 +34,6 @@ import (
 // ManagedResourceReconciler reconciles a ManagedResource object
 type ManagedResourceReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
 	config *rest.Config
 }
 
@@ -100,19 +98,16 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 		}
 	}
 
+	currentMR := managedresource
 	for _, nsDef := range nsList.Items {
-		MRDef, err := kube.GetManagedResource(ctx, managedresource.GetName())
+		originalMRDef := currentMR.DeepCopy()
+		currentMR, err = rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
 		if err != nil {
 			return err
 		}
-		originalMRDef := MRDef.DeepCopy()
-		MRDef, err = rdr.ReconcileNamespaceChange(ctx, MRDef, &nsDef)
-		if err != nil {
-			return err
-		}
-		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, MRDef.Status) {
-			managedResourceController.Info("Updating status", "name", MRDef.Name)
-			err = kube.UpdateStatus(MRDef, ctx)
+		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, currentMR.Status) {
+			managedResourceController.Info("Updating status", "name", currentMR.Name)
+			err = kube.UpdateStatus(currentMR, ctx)
 			if err != nil {
 				return err
 			}
@@ -120,11 +115,7 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 	}
 
 	// Process existing resources in status field
-	loadedManagedResource, err := kube.GetManagedResource(ctx, managedresource.GetName())
-	if err != nil {
-		return err
-	}
-	err = rdr.ReconcileMRCreatedResources(ctx, loadedManagedResource)
+	err = rdr.ReconcileMRCreatedResources(ctx, currentMR)
 	if err != nil {
 		return err
 	}
