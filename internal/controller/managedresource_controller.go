@@ -19,6 +19,9 @@ package controller
 import (
 	"context"
 
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -68,6 +71,17 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	err = reconcileManagedResource(ctx, r.config, mr)
 	if err != nil {
+		freshMR, fetchErr := kube.GetManagedResource(ctx, mr.GetName())
+		if fetchErr == nil {
+			apimeta.SetStatusCondition(&freshMR.Status.Conditions, metav1.Condition{
+				Type:               automationv1alpha1.ConditionReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "ReconcileError",
+				Message:            err.Error(),
+				ObservedGeneration: freshMR.Generation,
+			})
+			_ = kube.UpdateStatus(freshMR, ctx)
+		}
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -120,8 +134,14 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 		return err
 	}
 
-	return nil
-
+	apimeta.SetStatusCondition(&currentMR.Status.Conditions, metav1.Condition{
+		Type:               automationv1alpha1.ConditionReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Synced",
+		Message:            "All resources synced successfully",
+		ObservedGeneration: currentMR.Generation,
+	})
+	return kube.UpdateStatus(currentMR, ctx)
 }
 
 // SetupWithManager sets up the controller with the Manager.

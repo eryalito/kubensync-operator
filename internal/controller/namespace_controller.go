@@ -5,6 +5,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -78,6 +80,14 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 		originalMRDef := mrDef.DeepCopy()
 		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
 		if err != nil {
+			apimeta.SetStatusCondition(&mrDef.Status.Conditions, metav1.Condition{
+				Type:               automationv1alpha1.ConditionReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "ReconcileError",
+				Message:            err.Error(),
+				ObservedGeneration: mrDef.Generation,
+			})
+			_ = kube.UpdateStatus(&mrDef, ctx)
 			return err
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
