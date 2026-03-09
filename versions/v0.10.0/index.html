@@ -8,7 +8,7 @@
       
       
       
-        <link rel="canonical" href="https://kubensync.com/versions/v0.9.1/">
+        <link rel="canonical" href="https://kubensync.com/versions/v0.10.0/">
       
       
       
@@ -18,7 +18,7 @@
     
     
       
-        <title>Version v0.9.1 - KubeNSync</title>
+        <title>Version v0.10.0 - KubeNSync</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#version-v091" class="md-skip">
+        <a href="#version-v0100" class="md-skip">
           Skip to content
         </a>
       
@@ -107,7 +107,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Version v0.9.1
+              Version v0.10.0
             
           </span>
         </div>
@@ -967,18 +967,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#new-features" class="md-nav__link">
+  <a href="#new" class="md-nav__link">
     <span class="md-ellipsis">
-      New Features
+      New
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixes" class="md-nav__link">
+  <a href="#improvements" class="md-nav__link">
     <span class="md-ellipsis">
-      Fixes
+      Improvements
     </span>
   </a>
   
@@ -1012,19 +1012,21 @@
   
 
 
-<h1 id="version-v091">Version v0.9.1</h1>
-<p>This is the changelog for version 0.9.1.</p>
-<h2 id="new-features">New Features</h2>
+<h1 id="version-v0100">Version v0.10.0</h1>
+<p>This is the changelog for version 0.10.0.</p>
+<h2 id="new">New</h2>
 <ul>
-<li>Blog feature has been added to the documentation site. You can now read articles and tutorials related to KubeNSync directly on the site. Check out the <a href="https://kubensync.com/blog/">Blog</a> for more details.</li>
-<li>License information has been updated to include a separate license for blog content. The code and documentation are under the Apache License 2.0, while blog posts are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).</li>
+<li><strong>Status conditions</strong>: <code>ManagedResource</code> now exposes a standard <code>Ready</code> condition in <code>.status.conditions</code>. It is set to <code>True</code> when all resources are successfully synced, and <code>False</code> when reconciliation fails, with the error message included to help diagnose the issue. The condition is visible as a column when running <code>kubectl get mr</code>.</li>
 </ul>
-<h2 id="fixes">Fixes</h2>
+<h2 id="improvements">Improvements</h2>
 <ul>
-<li>Updated dependencies to fix security vulnerabilities and improve performance.</li>
+<li>Removed redundant API calls in the <code>ManagedResource</code> reconcile loop — the operator no longer re-fetches the resource on every namespace iteration.</li>
+<li>Removed unused <code>Scheme</code> field from both controller structs.</li>
+<li>Aligned logging in the namespace controller to use the structured logger consistent with the rest of the codebase.</li>
+<li>Extended e2e test coverage with tests for k8s versions 1.34 and 1.35.</li>
 </ul>
 <h2 id="release">Release</h2>
-<p>Check out the release on <a href="https://github.com/eryalito/kubensync-operator/releases/tag/v0.9.1">GitHub</a></p>
+<p>Check out the release on <a href="https://github.com/eryalito/kubensync-operator/releases/tag/v0.10.0">GitHub</a></p>
 
 
 
