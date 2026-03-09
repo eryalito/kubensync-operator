@@ -4,7 +4,6 @@ import (
 	// Import necessary packages
 
 	"context"
-	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -86,7 +85,7 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 			return err
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
-			log.Printf("Updating status for %s", newMRDef.Name)
+			namespaceControllerLogger.Info("Updating status", "name", newMRDef.Name)
 			err = kube.UpdateStatus(newMRDef, ctx)
 			if err != nil {
 				return err
