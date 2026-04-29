@@ -1,0 +1,146 @@
+# KubeNSync
+
+> Kubernetes operator that automatically creates and synchronizes resources across namespaces using Go templates.
+
+You define a `ManagedResource` (cluster-scoped CRD) with a namespace selector and a Go template. The operator renders the template once per matching namespace and creates, updates, or deletes the resulting Kubernetes resources. It tracks everything it creates in `status.createdResources` and cleans up when a namespace stops matching.
+
+## Key facts
+
+- Single CRD: `ManagedResource` (API group `automation.kubensync.com/v1alpha1`, short name `mr`, cluster-scoped)
+- Template engine: Go `text/template` + Sprout function library
+- Template context: `.Namespace` (full `corev1.Namespace` object) and `.Data` (map of external data sources)
+- Multiple resources per template separated by `---`
+- `avoidResourceUpdate: true` prevents updates to existing resources (create-only mode)
+- Namespace selector: Go regex AND/OR Kubernetes label selector (both must match if both are set)
+
+## Template data sources
+
+Three types can be injected into `.Data` via `spec.template.data[]`. They differ in how values are accessed inside the template:
+
+**`Secret`** — `ref` requires only `name` and `namespace`. Produces a flat key/value map. Values are automatically base64-decoded (Kubernetes stores secret data as base64; the operator decodes it before injection). Re-encode with `base64Encode` when the destination field expects base64.
+```
+.Data.<name>.<key>  →  string (decoded)
+```
+```yaml
+# ref
+- name: my_secret
+  type: Secret
+  ref:
+    name: my-secret
+    namespace: default
+# usage — index is required for keys containing dots or special characters
+data:
+  .dockerconfigjson: '{{ index .Data.my_secret ".dockerconfigjson" | base64Encode }}'
+  token: '{{ .Data.my_secret.token }}'
+```
+
+**`ConfigMap`** — `ref` requires only `name` and `namespace`. Produces a flat key/value map. Values are plain strings, no transformation applied.
+```
+.Data.<name>.<key>  →  string
+```
+```yaml
+# ref
+- name: my_cm
+  type: ConfigMap
+  ref:
+    name: my-configmap
+    namespace: default
+# usage
+data:
+  config: '{{ .Data.my_cm.some_key }}'
+```
+
+**`KubernetesResource`** — `ref` requires `name`, `namespace`, `kind`, `group` (empty string for core resources), and `apiVersion` (version only, e.g. `v1`, `v1beta1`). The full raw Kubernetes object is unmarshaled into a nested map — no key decoding or transformation. Access any field by its path in the object.
+```
+.Data.<name>.<field>.<subfield>  →  any
+```
+```yaml
+# ref
+- name: my_sa
+  type: KubernetesResource
+  ref:
+    apiVersion: v1
+    group: ""
+    kind: ServiceAccount
+    name: my-service-account
+    namespace: default
+# usage
+data:
+  serviceAccountName: '{{ .Data.my_sa.metadata.name }}'
+  uid: '{{ .Data.my_sa.metadata.uid }}'
+```
+
+## Template functions
+
+The template engine provides Go's built-in functions plus the full [Sprout](https://github.com/go-sprout/sprout) library.
+
+**Go built-ins:** `len`, `index`, `slice`, `printf`, `range`, `if`, `with`, `and`, `or`, `not`
+
+**Sprout highlights:**
+
+| Function | Description |
+|---|---|
+| `base64Encode` | Encode string to base64 |
+| `base64Decode` | Decode base64 string |
+| `toYAML` | Marshal a value to a YAML string |
+| `fromYAML` | Parse a YAML string into a map |
+| `indent <n>` | Indent a multiline string by n spaces |
+| `trim` | Strip leading/trailing whitespace |
+| `join <sep>` | Join a list into a string |
+| `split <sep>` | Split a string into a list |
+
+Full function list: [Sprout registry docs](https://docs.atom.codes/sprout/registries/list-of-all-registries)
+
+## Docs
+
+- [Getting Started](https://kubensync.com/getting-started/): Installation via kubectl or Helm, prerequisites
+- [Usage](https://kubensync.com/usage/): Full ManagedResource spec reference, status conditions
+- [Selectors](https://kubensync.com/reference/selectors/): Namespace regex and label selector details
+- [Template](https://kubensync.com/reference/template/): How the Go template system works, output format
+- [Template Data](https://kubensync.com/reference/template-data/): Loading Secrets, ConfigMaps, and arbitrary Kubernetes resources into template context
+- [Template Functions](https://kubensync.com/reference/template-functions/): Available Sprout functions (base64, YAML, string, collections, math)
+- [Examples Overview](https://kubensync.com/examples/): Index of real-world use cases
+
+## Examples
+
+- [Propagate a pull secret](https://kubensync.com/examples/pull-secret/): Clone a Secret from one namespace to all dev namespaces
+- [RBAC setup](https://kubensync.com/examples/rbac-handling/): Create Role and RoleBinding in matching namespaces
+- [Service Account](https://kubensync.com/examples/service-account/): Create a ServiceAccount in every matching namespace
+- [Resource Quota](https://kubensync.com/examples/quota/): Apply quotas with create-only mode to avoid overwriting user changes
+
+## ManagedResource spec shape
+
+```yaml
+apiVersion: automation.kubensync.com/v1alpha1
+kind: ManagedResource
+metadata:
+  name: example
+spec:
+  avoidResourceUpdate: false          # if true, never update existing resources
+  namespaceSelector:
+    regex: "^dev-.*"                  # Go regex on namespace name
+    labelSelector:                    # standard Kubernetes label selector
+      matchLabels:
+        env: dev
+  template:
+    data:
+      - name: pull_secret             # accessed as .Data.pull_secret.<key>
+        type: Secret                  # Secret | ConfigMap | KubernetesResource
+        ref:
+          name: my-secret
+          namespace: default
+    literal: | # go template string with access to .Namespace and .Data, supports multiple resources separated by --- and functions from the Sprout library
+      ---
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: my-secret
+        namespace: {{ .Namespace.Name }}
+      data:
+        token: '{{ index .Data.pull_secret "token" | base64Encode }}'
+```
+
+## Optional
+
+- [Versions / Changelog](https://kubensync.com/versions/): Release notes per version
+- [GitHub repository](https://github.com/eryalito/kubensync-operator): Source code, issues, CRD type definitions
