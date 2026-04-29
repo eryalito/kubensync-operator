@@ -1,8 +1,8 @@
 module github.com/eryalito/kubensync-operator
 
-go 1.24.1
+go 1.25
 
-godebug default=go1.24
+godebug default=go1.25
 
 require (
 	github.com/go-sprout/sprout v1.0.1
