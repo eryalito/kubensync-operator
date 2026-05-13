@@ -43,7 +43,7 @@ jobs:
           IMG=ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }} make docker-build docker-push
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Get release version and chart info
         shell: bash
