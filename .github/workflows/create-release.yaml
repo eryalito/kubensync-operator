@@ -56,7 +56,7 @@ jobs:
           echo "Successfully updated $VALUES_FILE"
 
       - name: Update helm docs
-        uses: losisin/helm-docs-github-action@v1
+        uses: losisin/helm-docs-github-action@v2
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
