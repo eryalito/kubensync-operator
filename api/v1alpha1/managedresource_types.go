@@ -126,7 +126,3 @@ type ManagedResourceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ManagedResource `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ManagedResource{}, &ManagedResourceList{})
-}
