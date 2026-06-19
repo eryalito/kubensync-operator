@@ -14,7 +14,7 @@ jobs:
     if: '!contains(github.event.pull_request.labels.*.name, ''skip-ci'')'
     steps:
       - name: Clone the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
