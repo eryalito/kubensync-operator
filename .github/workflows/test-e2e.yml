@@ -25,7 +25,7 @@ jobs:
           - "1.35"
     steps:
       - name: Clone the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Build operator
         run: |
