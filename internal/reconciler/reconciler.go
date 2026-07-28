@@ -86,7 +86,10 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 			return nil, err
 		}
 
-		metadata := obj.Object["metadata"].(map[string]interface{})
+		metadata, ok := obj.Object["metadata"].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("rendered manifest %s/%s has invalid metadata: expected a mapping", obj.GetAPIVersion(), obj.GetKind())
+		}
 		metadata["ownerReferences"] = mrOwnerRefs(mrDef)
 		getObj, err := ri.Get(ctx, obj.GetName(), metav1.GetOptions{})
 		if err != nil {
