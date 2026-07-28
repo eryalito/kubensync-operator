@@ -1,3 +1,8 @@
 # More info: https://docs.docker.com/engine/reference/builder/#dockerignore-file
-# Ignore build and test binaries.
+# Only exclude files git does not track. Excluding a tracked file would leave the
+# build tree incomplete and mark the recorded module version dirty.
 bin/
+site/
+*.out
+*.test
+Dockerfile.cross
