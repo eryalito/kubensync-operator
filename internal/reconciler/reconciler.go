@@ -43,7 +43,7 @@ var (
 const maxTemplateDocuments = 1024
 
 // nolint:gocyclo // Ignore gocyclo for this line
-func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (*automationv1alpha1.ManagedResource, error) {
+func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (result *automationv1alpha1.ManagedResource, err error) {
 	newMRDef := mrDef.DeepCopy()
 	r.ownerRefs = mrOwnerRefs(mrDef)
 
@@ -68,6 +68,18 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
+
+	// On any failure while touching the API server, report the resources created so
+	// far plus the previously tracked ones not yet confirmed gone, so nothing is
+	// dropped from the status or left listed after being deleted. Both loops keep
+	// remainingPrevCreatedResources in sync so this holds at every exit.
+	defer func() {
+		if err != nil {
+			newMRDef.Status.CreatedResources = append(createdAndUpdatedResourcesList, remainingPrevCreatedResources...)
+			result = newMRDef
+		}
+	}()
+
 	for _, obj := range objs {
 		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
 		if err != nil {
@@ -131,11 +143,15 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		}
 	}
 
-	// Delete the remaining resources that were created in the previous reconciliation but are not needed anymore
-	for _, resource := range remainingPrevCreatedResources {
+	// Delete the remaining resources that were created in the previous reconciliation but are not needed anymore.
+	// Each entry is removed from remainingPrevCreatedResources once it is confirmed gone or kept, so the deferred
+	// status update keeps reflecting what still exists if a delete fails partway.
+	for len(remainingPrevCreatedResources) > 0 {
+		resource := remainingPrevCreatedResources[0]
 		// The trigger namespace should be the same, if not, just skip it and keep it as created
 		if resource.TriggerNamespace != namespace.Name {
 			createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, resource)
+			remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
 			continue
 		}
 		obj := &unstructured.Unstructured{}
@@ -152,10 +168,12 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		if err != nil {
 			if errors.IsNotFound(err) {
 				reconcilerLoggerDebug.Info("Resource already deleted", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
+				remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
 				continue
 			}
 			return nil, err
 		}
+		remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
 	}
 
 	newMRDef.Status.CreatedResources = createdAndUpdatedResourcesList
