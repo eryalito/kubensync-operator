@@ -3,6 +3,9 @@ package reconciler
 import (
 	"bytes"
 	"context"
+	stderrors "errors"
+	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"sync"
@@ -35,6 +38,10 @@ var (
 	reconcilerLoggerDebug = ctrl.Log.WithName("reconciler").V((1))
 )
 
+// maxTemplateDocuments bounds the documents accepted from a single rendered
+// template, so a decoder that stops consuming input cannot loop indefinitely.
+const maxTemplateDocuments = 1024
+
 // nolint:gocyclo // Ignore gocyclo for this line
 func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (*automationv1alpha1.ManagedResource, error) {
 	newMRDef := mrDef.DeepCopy()
@@ -54,24 +61,14 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	if err != nil {
 		return nil, err
 	}
-	// Use apimachinery's YAML decoder to iterate over all documents in the manifest
+	objs, err := decodeManifests(manifests)
+	if err != nil {
+		return nil, err
+	}
+
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
-	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifests), 1024)
-	for {
-		obj := &unstructured.Unstructured{}
-		err := decoder.Decode(obj)
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-			reconcilerLogger.Error(err, "Error decoding manifests")
-			continue
-		}
-		if len(obj.Object) == 0 {
-			continue
-		}
-
+	for _, obj := range objs {
 		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
 		if err != nil {
 			return nil, err
@@ -165,6 +162,31 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 
 	reconcilerLogger.Info("End reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
 	return newMRDef, nil
+}
+
+// decodeManifests decodes every document of a rendered template.
+func decodeManifests(manifests string) ([]*unstructured.Unstructured, error) {
+	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifests), 1024)
+	objs := []*unstructured.Unstructured{}
+	for document := 1; ; document++ {
+		if document > maxTemplateDocuments {
+			return nil, fmt.Errorf("rendered template holds more than %d documents", maxTemplateDocuments)
+		}
+		obj := &unstructured.Unstructured{}
+		err := decoder.Decode(obj)
+		if err != nil {
+			if stderrors.Is(err, io.EOF) {
+				break
+			}
+			reconcilerLogger.Error(err, "Error decoding manifests", "document", document)
+			return nil, fmt.Errorf("error decoding rendered manifest document %d", document)
+		}
+		if len(obj.Object) == 0 {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	return objs, nil
 }
 
 func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerReference {
