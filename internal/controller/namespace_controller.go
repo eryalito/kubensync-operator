@@ -80,14 +80,19 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 		originalMRDef := mrDef.DeepCopy()
 		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
 		if err != nil {
-			apimeta.SetStatusCondition(&mrDef.Status.Conditions, metav1.Condition{
+			// Prefer the returned resource so any partially applied resources stay tracked.
+			statusMR := &mrDef
+			if newMRDef != nil {
+				statusMR = newMRDef
+			}
+			apimeta.SetStatusCondition(&statusMR.Status.Conditions, metav1.Condition{
 				Type:               automationv1alpha1.ConditionReady,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ReconcileError",
 				Message:            err.Error(),
-				ObservedGeneration: mrDef.Generation,
+				ObservedGeneration: statusMR.Generation,
 			})
-			_ = kube.UpdateStatus(&mrDef, ctx)
+			_ = kube.UpdateStatus(statusMR, ctx)
 			return err
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {

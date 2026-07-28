@@ -115,10 +115,15 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 	currentMR := managedresource
 	for _, nsDef := range nsList.Items {
 		originalMRDef := currentMR.DeepCopy()
-		currentMR, err = rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
-		if err != nil {
-			return err
+		reconciledMR, reconcileErr := rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
+		if reconcileErr != nil {
+			// Persist any resources created before the failure so the status keeps tracking them.
+			if reconciledMR != nil && kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, reconciledMR.Status) {
+				_ = kube.UpdateStatus(reconciledMR, ctx)
+			}
+			return reconcileErr
 		}
+		currentMR = reconciledMR
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, currentMR.Status) {
 			managedResourceController.Info("Updating status", "name", currentMR.Name)
 			err = kube.UpdateStatus(currentMR, ctx)
