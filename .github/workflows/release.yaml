@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-operator:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_PUSH_ACTIONS_ID }}
+          password: ${{ secrets.GHCR_PUSH_ACTIONS_PAT }}
+
+      - name: Build operator
+        run: |
+          IMG=ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }} make docker-build docker-push
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: Get release version and chart info
+        shell: bash
+        id: get_chart_info
+        run: |
+          HELM_CHART_VERSION=$(yq .version "dist/chart/Chart.yaml")
+          echo "HELM_CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
+          HELM_CHART_NAME=$(yq .name "dist/chart/Chart.yaml")
+          echo "HELM_CHART_NAME=${HELM_CHART_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Package Helm Chart
+        shell: bash
+        id: package_chart
+        run: |
+          helm package dist/chart
+
+          TGZ_FILE_PATH="${{ steps.get_chart_info.outputs.HELM_CHART_NAME }}-${{ steps.get_chart_info.outputs.HELM_CHART_VERSION }}.tgz"
+          echo "TGZ_FILE_PATH=${TGZ_FILE_PATH}" >> $GITHUB_OUTPUT
+          # Verify the packaged chart file exists
+          if [ ! -f "$TGZ_FILE_PATH" ]; then
+            echo "Error: Helm package $TGZ_FILE_PATH not found after packaging."
+            echo "Listing current directory contents:"
+            ls -l .
+            exit 1
+          fi
+
+      - name: Push Helm Chart to OCI Registry
+        shell: bash
+        run: |
+          helm push "${{ steps.package_chart.outputs.TGZ_FILE_PATH }}" oci://ghcr.io/eryalito/kubensync-charts
+          echo "Helm chart pushed to OCI registry successfully."
+
+      - name: Upload Helm Chart to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" "${{ steps.package_chart.outputs.TGZ_FILE_PATH }}" --clobber
+
+  deploy-site:
+    needs: publish-operator
+    # Run after a successful publish, and also on manual dispatch (publish
+    # skipped). A failed publish blocks the deploy so the charts index never
+    # misses a just-released version.
+    if: ${{ !cancelled() && needs.publish-operator.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gh-pages
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install MkDocs
+        run: pip install mkdocs mkdocs-material
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: Generate Helm repository index
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WORKDIR="$(mktemp -d)"
+          INDEX=""
+          for TAG in $(gh release list --limit 1000 --json tagName --jq '.[].tagName'); do
+            DIR="$WORKDIR/$TAG"
+            mkdir -p "$DIR"
+            gh release download "$TAG" --pattern 'kubensync-*.tgz' --dir "$DIR" || true
+            if [ -z "$(ls -A "$DIR")" ]; then
+              echo "No chart asset in release $TAG, skipping."
+              continue
+            fi
+            if [ -n "$INDEX" ]; then
+              helm repo index "$DIR" --url "https://github.com/${{ github.repository }}/releases/download/$TAG" --merge "$INDEX"
+            else
+              helm repo index "$DIR" --url "https://github.com/${{ github.repository }}/releases/download/$TAG"
+            fi
+            INDEX="$DIR/index.yaml"
+          done
+          if [ -z "$INDEX" ]; then
+            echo "No chart assets found in any release; deploying site without charts index."
+            exit 0
+          fi
+          mkdir -p docs/charts
+          cp "$INDEX" docs/charts/index.yaml
+          echo "Charts index generated with $(yq '.entries.kubensync | length' docs/charts/index.yaml) versions."
+
+      - name: Deploy site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdocs gh-deploy --force

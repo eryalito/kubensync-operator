@@ -3,39 +3,82 @@ name: Create new release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Semantic version for the release (e.g., 1.2.3 or 1.2.3-alpha.1)'
-        required: true
+      tag:
+        description: 'Tag of the draft release to prepare (only needed when multiple drafts exist)'
+        required: false
 
 jobs:
   create_release_pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Find draft release
+        id: draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          DRAFTS=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '[.[] | select(.draft == true)]')
+          COUNT=$(echo "$DRAFTS" | jq length)
+
+          if [ -n "$INPUT_TAG" ]; then
+            DRAFT=$(echo "$DRAFTS" | jq --arg t "$INPUT_TAG" '[.[] | select(.tag_name == $t)] | first')
+            if [ "$DRAFT" = "null" ]; then
+              echo "Error: no draft release found with tag $INPUT_TAG"
+              exit 1
+            fi
+          else
+            if [ "$COUNT" -eq 0 ]; then
+              echo "Error: no draft release found. Create a draft release (tag + release notes) first."
+              exit 1
+            fi
+            if [ "$COUNT" -gt 1 ]; then
+              echo "Error: multiple draft releases found, pass the 'tag' input to pick one:"
+              echo "$DRAFTS" | jq -r '.[].tag_name'
+              exit 1
+            fi
+            DRAFT=$(echo "$DRAFTS" | jq 'first')
+          fi
+
+          TAG=$(echo "$DRAFT" | jq -r '.tag_name')
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+          echo "$DRAFT" | jq -r '.body // ""' | sed 's/\r$//' > "$RUNNER_TEMP/draft_body.md"
+          if [ ! -s "$RUNNER_TEMP/draft_body.md" ]; then
+            echo "Error: draft release $TAG has an empty body. Write the release notes in the draft first."
+            exit 1
+          fi
+          echo "Using draft release $TAG"
+
       - name: Validate version
         run: |
-          echo "${{ github.event.inputs.version }}" | grep -q -P '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$' || exit 1
+          echo "${{ steps.draft.outputs.VERSION }}" | grep -q -P '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$' || exit 1
 
       - name: Check if tag exists
         run: |
           git fetch --tags
-          if git rev-parse "v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+          if git rev-parse "${{ steps.draft.outputs.TAG }}" >/dev/null 2>&1; then
             echo "Tag already exists"
             exit 1
           fi
 
       - name: Render manifests
-        run: IMG=ghcr.io/${{ github.repository }}:${{ inputs.version }} make build-installer
+        run: IMG=ghcr.io/${{ github.repository }}:${{ steps.draft.outputs.VERSION }} make build-installer
 
       - name: Update Chart files
         run: |
           # IMPORTANT: Adjust this path to your Chart.yaml file
           CHART_FILE="dist/chart/Chart.yaml"
           VALUES_FILE="dist/chart/values.yaml"
-          NEW_VERSION="${{ github.event.inputs.version }}"
+          NEW_VERSION="${{ steps.draft.outputs.VERSION }}"
 
           if [ ! -f "$CHART_FILE" ]; then
             echo "Error: Chart file not found at $CHART_FILE"
@@ -58,19 +101,49 @@ jobs:
       - name: Update helm docs
         uses: losisin/helm-docs-github-action@v2
 
+      - name: Port release notes from draft
+        shell: bash
+        run: |
+          VERSION="${{ steps.draft.outputs.VERSION }}"
+          NOTES_FILE="docs/versions/v${VERSION}.md"
+
+          {
+            echo "# Version v${VERSION}"
+            echo
+            echo "This is the changelog for version ${VERSION}."
+            echo
+            cat "$RUNNER_TEMP/draft_body.md"
+            echo
+            echo "## Release"
+            echo
+            echo "Check out the release on [GitHub](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION})"
+          } > "$NOTES_FILE"
+          echo "Wrote $NOTES_FILE from draft release body"
+
+          INDEX_FILE="docs/versions/index.md"
+          ROW="| [v${VERSION}](./v${VERSION}.md) | [GitHub](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) |"
+          if grep -qF "(./v${VERSION}.md)" "$INDEX_FILE"; then
+            echo "$INDEX_FILE already lists v${VERSION}"
+          else
+            sed -i "/^|---------|---------|$/a ${ROW}" "$INDEX_FILE"
+            echo "Added v${VERSION} row to $INDEX_FILE"
+          fi
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: Bump version to ${{ github.event.inputs.version }}"
-          title: "Bump version to ${{ github.event.inputs.version }}"
+          commit-message: "chore: Bump version to ${{ steps.draft.outputs.VERSION }}"
+          title: "Bump version to ${{ steps.draft.outputs.VERSION }}"
           body: |
-            This PR bumps the Helm chart version to `${{ github.event.inputs.version }}`.
+            This PR bumps the Helm chart version to `${{ steps.draft.outputs.VERSION }}` and ports the release notes from the draft release.
+
+            After merging, publish the draft release to trigger the release pipeline.
 
             Triggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          branch: "release/bump-version-${{ github.event.inputs.version }}"
+          branch: "release/bump-version-${{ steps.draft.outputs.VERSION }}"
           base: ${{ github.ref_name }}
-          add-paths: dist/install.yaml,dist/chart/Chart.yaml,dist/chart/values.yaml,dist/chart/README.md
+          add-paths: dist/install.yaml,dist/chart/Chart.yaml,dist/chart/values.yaml,dist/chart/README.md,docs/versions/*.md
           delete-branch: true
           labels: |
             automated-pr
