@@ -1,0 +1,130 @@
+apiVersion: v1
+entries:
+  kubensync:
+  - apiVersion: v2
+    appVersion: 0.13.1
+    created: "2026-08-19T17:23:41.959144106Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: 830411d510c0a08eff96b08d3cf7cefc52764c97f984e483bc0aa078574884ad
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.13.1/kubensync-0.13.1.tgz
+    version: 0.13.1
+  - apiVersion: v2
+    appVersion: 0.13.0
+    created: "2026-08-19T17:23:42.421371967Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: aa2eee9c98c8a9fb3f0c7366c4f71bc84bc04bf1ee1920392350b826f7299733
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.13.0/kubensync-0.13.0.tgz
+    version: 0.13.0
+  - apiVersion: v2
+    appVersion: 0.12.0
+    created: "2026-08-19T17:23:42.884224603Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: c159a5b0a1150faf128c5dd42c417a945502e7b7d6176fa8aa55a214e0764644
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.12.0/kubensync-0.12.0.tgz
+    version: 0.12.0
+  - apiVersion: v2
+    appVersion: 0.11.0
+    created: "2026-08-19T17:23:43.332384035Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: cf01f3a5601d1766efaf030ac426b94d1b1e6fcca6ca49cc3c212a663535d519
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.11.0/kubensync-0.11.0.tgz
+    version: 0.11.0
+  - apiVersion: v2
+    appVersion: 0.10.0
+    created: "2026-08-19T17:23:43.762373477Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: b2774807401d2d60f7c81654c0fc0416b79c0b00b97b9ad4e2313d38f7e29494
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.10.0/kubensync-0.10.0.tgz
+    version: 0.10.0
+  - apiVersion: v2
+    appVersion: 0.9.4
+    created: "2026-08-19T17:23:44.173359442Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: 20c55ffc33b24821f091e41228fbeafffbc3dfa61d2270e3d3a801755bf82604
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.9.4/kubensync-0.9.4.tgz
+    version: 0.9.4
+  - apiVersion: v2
+    appVersion: 0.9.3
+    created: "2026-08-19T17:23:44.587079457Z"
+    description: A Helm chart to distribute the kubensync operator.
+    digest: acccf5b4a13f5d7429f4f3575fcefa44515f524b46ad6036fd4ec80cd9fe4566
+    home: https://kubensync.com
+    icon: https://raw.githubusercontent.com/eryalito/kubensync-operator/refs/heads/master/docs/assets/logo.png
+    maintainers:
+    - email: eryalito@gmail.com
+      name: Eryalito
+      url: https://eryalito.dev
+    name: kubensync
+    sources:
+    - https://github.com/eryalito/kubensync-operator
+    type: application
+    urls:
+    - https://github.com/eryalito/kubensync-operator/releases/download/v0.9.3/kubensync-0.9.3.tgz
+    version: 0.9.3
+generated: "2026-08-19T17:23:44.58602415Z"
