@@ -2,6 +2,7 @@
 
 | Version | Release |
 |---------|---------|
+| [v0.14.0](./v0.14.0.md) | [GitHub](https://github.com/eryalito/kubensync-operator/releases/tag/v0.14.0) |
 | [v0.13.1](./v0.13.1.md) | [GitHub](https://github.com/eryalito/kubensync-operator/releases/tag/v0.13.1) |
 | [v0.13.0](./v0.13.0.md) | [GitHub](https://github.com/eryalito/kubensync-operator/releases/tag/v0.13.0) |
 | [v0.12.0](./v0.12.0.md) | [GitHub](https://github.com/eryalito/kubensync-operator/releases/tag/v0.12.0) |
