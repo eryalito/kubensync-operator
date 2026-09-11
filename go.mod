@@ -6,7 +6,7 @@ godebug default=go1.26
 
 require (
 	github.com/go-sprout/sprout v1.1.1
-	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.42.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.37.0
