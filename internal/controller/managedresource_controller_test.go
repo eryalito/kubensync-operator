@@ -32,24 +32,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/config"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 )
 
 // newReconciler returns a reconciler that uses c for the ManagedResource and cfg for everything else.
 func newReconciler(c client.Client) *ManagedResourceReconciler {
-	httpClient, err := rest.HTTPClientFor(cfg)
-	Expect(err).NotTo(HaveOccurred())
-	mapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	Expect(err).NotTo(HaveOccurred())
-	r := &ManagedResourceReconciler{Client: c, apiReader: c, restMapper: mapper}
+	r := &ManagedResourceReconciler{Client: c, apiReader: c, discoveryClient: discovery.NewDiscoveryClientForConfigOrDie(cfg)}
 	setConfig(r, cfg)
 	return r
 }
@@ -151,6 +149,26 @@ func configWithTransport(wrap func(next http.RoundTripper, req *http.Request) (*
 		return roundTripperFunc(func(req *http.Request) (*http.Response, error) { return wrap(next, req) })
 	})
 	return c
+}
+
+// newCRD returns a namespaced CRD for kind in group, served as v1.
+func newCRD(group, kind, plural string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "apiextensions.k8s.io/v1",
+		"kind":       "CustomResourceDefinition",
+		"metadata":   map[string]interface{}{"name": plural + "." + group},
+		"spec": map[string]interface{}{
+			"group": group,
+			"scope": "Namespaced",
+			"names": map[string]interface{}{"plural": plural, "singular": strings.ToLower(kind), "kind": kind, "listKind": kind + "List"},
+			"versions": []interface{}{map[string]interface{}{
+				"name": "v1", "served": true, "storage": true,
+				"schema": map[string]interface{}{"openAPIV3Schema": map[string]interface{}{
+					"type": "object", "x-kubernetes-preserve-unknown-fields": true,
+				}},
+			}},
+		},
+	}}
 }
 
 var _ = Describe("ManagedResource controller", func() {
@@ -415,22 +433,7 @@ metadata:
 		_, err := r.Reconcile(ctx, req)
 		Expect(err).NotTo(HaveOccurred())
 
-		crd := &unstructured.Unstructured{Object: map[string]interface{}{
-			"apiVersion": "apiextensions.k8s.io/v1",
-			"kind":       "CustomResourceDefinition",
-			"metadata":   map[string]interface{}{"name": "widgets.late.kubensync.com"},
-			"spec": map[string]interface{}{
-				"group": "late.kubensync.com",
-				"scope": "Namespaced",
-				"names": map[string]interface{}{"plural": "widgets", "singular": "widget", "kind": "Widget", "listKind": "WidgetList"},
-				"versions": []interface{}{map[string]interface{}{
-					"name": "v1", "served": true, "storage": true,
-					"schema": map[string]interface{}{"openAPIV3Schema": map[string]interface{}{
-						"type": "object", "x-kubernetes-preserve-unknown-fields": true,
-					}},
-				}},
-			},
-		}}
+		crd := newCRD("late.kubensync.com", "Widget", "widgets")
 		Expect(k8sClient.Create(ctx, crd)).To(Succeed())
 		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, crd))).To(Succeed()) })
 
@@ -452,5 +455,73 @@ metadata:
 		widget.SetAPIVersion("late.kubensync.com/v1")
 		widget.SetKind("Widget")
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "late-crd-0", Name: "late-crd"}, widget)).To(Succeed())
+	})
+
+	It("fails instead of treating objects as absent when their kind stops being served", func() {
+		r, _ := newCountingReconciler()
+		crd := newCRD("stale.kubensync.com", "Gadget", "gadgets")
+		Expect(k8sClient.Create(ctx, crd)).To(Succeed())
+		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, crd))).To(Succeed()) })
+		mr, req := createManagedResource("stale", 1, configMapLiteral("stale", `{{ if .Data.g }}present{{ else }}absent{{ end }}`))
+		gadget := &unstructured.Unstructured{}
+		gadget.SetAPIVersion("stale.kubensync.com/v1")
+		gadget.SetKind("Gadget")
+		gadget.SetNamespace("stale-0")
+		gadget.SetName("g")
+		Eventually(func() error { return client.IgnoreAlreadyExists(k8sClient.Create(ctx, gadget)) }).
+			WithTimeout(30 * time.Second).WithPolling(500 * time.Millisecond).Should(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "g",
+			Type: automationv1alpha1.KubernetesResource,
+			Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{
+				Group: "stale.kubensync.com", ApiVersion: "v1", Kind: "Gadget", Name: "g", Namespace: "stale-0",
+			},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		cm := &corev1.ConfigMap{}
+		cmKey := types.NamespacedName{Namespace: "stale-0", Name: "stale"}
+		Expect(k8sClient.Get(ctx, cmKey, cm)).To(Succeed())
+		Expect(cm.Data).To(HaveKeyWithValue("value", "present"))
+
+		By("deleting the CRD")
+		Expect(k8sClient.Delete(ctx, crd)).To(Succeed())
+		dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)
+		Eventually(func() bool {
+			_, err := dc.ServerResourcesForGroupVersion("stale.kubensync.com/v1")
+			return apierrors.IsNotFound(err)
+		}).WithTimeout(30 * time.Second).WithPolling(500 * time.Millisecond).Should(BeTrue())
+
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).To(HaveOccurred())
+		Expect(k8sClient.Get(ctx, cmKey, cm)).To(Succeed())
+		Expect(cm.Data).To(HaveKeyWithValue("value", "present"))
+	})
+
+	It("wires its clients in SetupWithManager", func() {
+		skipNameValidation := true
+		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:                 scheme.Scheme,
+			Metrics:                metricsserver.Options{BindAddress: "0"},
+			HealthProbeBindAddress: "0",
+			Controller:             config.Controller{SkipNameValidation: &skipNameValidation},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		mrController := &ManagedResourceReconciler{Client: mgr.GetClient()}
+		Expect(mrController.SetupWithManager(mgr)).To(Succeed())
+		nsController := &NamespaceController{Client: mgr.GetClient()}
+		Expect(nsController.SetupWithManager(mgr)).To(Succeed())
+		mr, req := createManagedResource("wired", 1, configMapLiteral("wired", "ok"))
+
+		_, err = mrController.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("handling a namespace created afterwards")
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "wired-1"}}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, ns))).To(Succeed())
+		Expect(nsController.reconcileNamespace(ctx, ns)).To(Succeed())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(2))
 	})
 })

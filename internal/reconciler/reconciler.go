@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -33,7 +32,6 @@ type Reconciler struct {
 	DynamicClient dynamic.Interface
 	RESTMapper    meta.RESTMapper
 	ownerRefs     []metav1.OwnerReference
-	RestConfig    *rest.Config
 }
 
 var (

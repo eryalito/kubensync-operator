@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,10 +42,10 @@ import (
 // ManagedResourceReconciler reconciles a ManagedResource object
 type ManagedResourceReconciler struct {
 	client.Client
-	apiReader     client.Reader
-	config        *rest.Config
-	restMapper    apimeta.RESTMapper
-	dynamicClient dynamic.Interface
+	apiReader       client.Reader
+	config          *rest.Config
+	discoveryClient discovery.DiscoveryInterface
+	dynamicClient   dynamic.Interface
 }
 
 var managedResourceController = ctrl.Log.WithName("managedresource_controller")
@@ -107,7 +108,7 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context, managedresource *automationv1alpha1.ManagedResource) error {
 	var err error
 	var nsList *corev1.NamespaceList
-	rdr := reconciler.Reconciler{RestConfig: r.config, RESTMapper: r.restMapper, DynamicClient: r.dynamicClient}
+	rdr := reconciler.Reconciler{RESTMapper: kube.NewRESTMapper(r.discoveryClient), DynamicClient: r.dynamicClient}
 
 	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 
@@ -217,7 +218,11 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
 	r.apiReader = mgr.GetAPIReader()
-	r.restMapper = mgr.GetRESTMapper()
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	r.discoveryClient = discoveryClient
 	dynamicClient, err := dynamic.NewForConfigAndClient(mgr.GetConfig(), mgr.GetHTTPClient())
 	if err != nil {
 		return err
