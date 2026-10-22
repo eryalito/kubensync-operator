@@ -367,4 +367,23 @@ metadata:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(*statusWrites).To(BeZero())
 	})
+
+	It("takes over objects left by a deleted ManagedResource with the same name", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("recreated", 1, configMapLiteral("recreated", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("recreating the ManagedResource before its objects are garbage collected")
+		Expect(k8sClient.Delete(ctx, mr)).To(Succeed())
+		recreated := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: mr.Name}, Spec: mr.Spec}
+		Expect(k8sClient.Create(ctx, recreated)).To(Succeed())
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		cm := &corev1.ConfigMap{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "recreated-0", Name: "recreated"}, cm)).To(Succeed())
+		Expect(cm.OwnerReferences).To(HaveLen(1))
+		Expect(cm.OwnerReferences[0].UID).To(Equal(recreated.UID))
+	})
 })
