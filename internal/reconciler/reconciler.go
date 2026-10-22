@@ -17,19 +17,21 @@ import (
 	"github.com/go-sprout/sprout/group/all"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type Reconciler struct {
-	Clientset  *kubernetes.Clientset
-	ownerRefs  []metav1.OwnerReference
-	RestConfig *rest.Config
+	Clientset     *kubernetes.Clientset
+	DynamicClient dynamic.Interface
+	RESTMapper    meta.RESTMapper
+	ownerRefs     []metav1.OwnerReference
 }
 
 var (
@@ -57,7 +59,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		return newMRDef, nil
 	}
 
-	manifests, err := renderTemplateForNamespace(mrDef.Spec.Template, namespace, r.RestConfig)
+	manifests, err := r.renderTemplateForNamespace(mrDef.Spec.Template, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +83,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	}()
 
 	for _, obj := range objs {
-		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
+		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RESTMapper, r.DynamicClient)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +164,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		obj.SetKind(resource.Kind)
 		obj.SetName(resource.Name)
 		obj.SetNamespace(resource.Namespace)
-		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
+		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RESTMapper, r.DynamicClient)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +236,7 @@ func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReferenc
 	return append(list, ref)
 }
 
-func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {
+func (r *Reconciler) renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace) (string, error) {
 
 	handler := sprout.New()
 	// Add all the registries to the handler
@@ -249,7 +251,7 @@ func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTempla
 		return "", err
 	}
 
-	refdata, err := getTemplateData(tpl.Data, config)
+	refdata, err := r.getTemplateData(tpl.Data)
 	if err != nil {
 		return "", err
 	}

@@ -24,7 +24,7 @@ func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedRes
 		obj.SetKind(createdResource.Kind)
 		obj.SetName(createdResource.Name)
 		obj.SetNamespace(createdResource.Namespace)
-		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RestConfig)
+		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RESTMapper, r.DynamicClient)
 		if err != nil {
 			return err
 		}
