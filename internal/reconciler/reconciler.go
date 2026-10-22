@@ -220,19 +220,18 @@ func mrOwnerRefs(rbacDef *automationv1alpha1.ManagedResource) []metav1.OwnerRefe
 	}
 }
 
-// appendOwnerReference appends a new OwnerReference to the list of OwnerReferences if it is not already present
+// appendOwnerReference appends a new OwnerReference to the list of OwnerReferences if it is not already present.
+// A reference with the same kind and name but another UID points to a deleted owner, such as a
+// ManagedResource that was deleted and recreated, and is replaced: left in place, the garbage
+// collector would delete the object.
 func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReference) []metav1.OwnerReference {
-	duplicated := false
-	for _, element := range list {
+	for i, element := range list {
 		if element.APIVersion == ref.APIVersion && element.Kind == ref.Kind && element.Name == ref.Name {
-			duplicated = true
-			break
+			list[i] = ref
+			return list
 		}
 	}
-	if !duplicated {
-		list = append(list, ref)
-	}
-	return list
+	return append(list, ref)
 }
 
 func renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace, config *rest.Config) (string, error) {

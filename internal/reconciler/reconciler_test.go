@@ -1,9 +1,13 @@
 package reconciler
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -166,5 +170,44 @@ func TestDecodeManifestsErrorDoesNotEchoInput(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "s3cr3t-token") {
 		t.Fatalf("error echoes the rendered template: %v", err)
+	}
+}
+
+func TestAppendOwnerReference(t *testing.T) {
+	owner := func(name, uid string) metav1.OwnerReference {
+		return metav1.OwnerReference{APIVersion: "automation.kubensync.com/v1alpha1", Kind: "ManagedResource", Name: name, UID: types.UID(uid)}
+	}
+	tests := []struct {
+		name string
+		list []metav1.OwnerReference
+		want []metav1.OwnerReference
+	}{
+		{
+			name: "no references",
+			want: []metav1.OwnerReference{owner("mr", "new")},
+		},
+		{
+			name: "already owned",
+			list: []metav1.OwnerReference{owner("mr", "new")},
+			want: []metav1.OwnerReference{owner("mr", "new")},
+		},
+		{
+			name: "owned by a deleted owner with the same name",
+			list: []metav1.OwnerReference{owner("mr", "old")},
+			want: []metav1.OwnerReference{owner("mr", "new")},
+		},
+		{
+			name: "owned by another owner",
+			list: []metav1.OwnerReference{owner("other", "other")},
+			want: []metav1.OwnerReference{owner("other", "other"), owner("mr", "new")},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := appendOwnerReference(tt.list, owner("mr", "new"))
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
 	}
 }
