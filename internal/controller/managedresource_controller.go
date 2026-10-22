@@ -31,7 +31,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
@@ -55,6 +58,22 @@ var managedResourceController = ctrl.Log.WithName("managedresource_controller")
 var statusCheckpointInterval = 10 * time.Second
 
 const statusWriteTimeout = 10 * time.Second
+
+// resyncPredicate passes the cache's periodic resync events, which GenerationChangedPredicate drops.
+var resyncPredicate = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		return e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion()
+	},
+}
+
+// managedResourceEvents ignores status-only updates, so the controller's own status writes do not
+// trigger another reconcile.
+var managedResourceEvents = predicate.Or(
+	predicate.GenerationChangedPredicate{},
+	predicate.AnnotationChangedPredicate{},
+	predicate.LabelChangedPredicate{},
+	resyncPredicate,
+)
 
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/status,verbs=get;update;patch
@@ -229,7 +248,7 @@ func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	r.dynamicClient = dynamicClient
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&automationv1alpha1.ManagedResource{}).
+		For(&automationv1alpha1.ManagedResource{}, builder.WithPredicates(managedResourceEvents)).
 		Named("managedresource").
 		Complete(r)
 }

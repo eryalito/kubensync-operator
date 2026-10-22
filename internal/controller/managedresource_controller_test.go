@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/config"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
@@ -638,5 +639,33 @@ metadata:
 			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: fmt.Sprintf("unmatched-%d", i), Name: "unmatched"}, &corev1.ConfigMap{})
 			Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		}
+	})
+
+	It("reconciles on spec, metadata and resync events, but not on status writes", func() {
+		old := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "events", Generation: 1, ResourceVersion: "1"}}
+		updated := func(change func(mr *automationv1alpha1.ManagedResource)) *automationv1alpha1.ManagedResource {
+			mr := old.DeepCopy()
+			mr.ResourceVersion = "2"
+			change(mr)
+			return mr
+		}
+		statusOnly := updated(func(mr *automationv1alpha1.ManagedResource) {
+			mr.Status.CreatedResources = []automationv1alpha1.CreatedResource{{Name: "cm"}}
+		})
+		specChange := updated(func(mr *automationv1alpha1.ManagedResource) { mr.Generation = 2 })
+		annotationChange := updated(func(mr *automationv1alpha1.ManagedResource) {
+			mr.Annotations = map[string]string{"resync": "now"}
+		})
+		labelChange := updated(func(mr *automationv1alpha1.ManagedResource) {
+			mr.Labels = map[string]string{"kubensync.com/trigger": "true"}
+		})
+
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: statusOnly})).To(BeFalse())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: specChange})).To(BeTrue())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: annotationChange})).To(BeTrue())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: labelChange})).To(BeTrue())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: old.DeepCopy()})).To(BeTrue())
+		Expect(managedResourceEvents.Create(event.CreateEvent{Object: old})).To(BeTrue())
+		Expect(managedResourceEvents.Delete(event.DeleteEvent{Object: old})).To(BeTrue())
 	})
 })
