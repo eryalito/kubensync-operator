@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,6 +46,12 @@ type ManagedResourceReconciler struct {
 
 var managedResourceController = ctrl.Log.WithName("managedresource_controller")
 
+// statusCheckpointInterval bounds the tracking a reconcile loses if it stops mid-pass,
+// without writing the whole status once per namespace.
+var statusCheckpointInterval = 10 * time.Second
+
+const statusWriteTimeout = 10 * time.Second
+
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/finalizers,verbs=update
@@ -58,8 +67,12 @@ var managedResourceController = ctrl.Log.WithName("managedresource_controller")
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.0/pkg/reconcile
 func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	managedResourceController.Info("Reconciling ManagedResource", "name", req.Name)
+	reconciler.Mutex.Lock()
+	defer reconciler.Mutex.Unlock()
+	// Read from the API server once the lock is held: the namespace controller may have
+	// written this status while we waited, and a cached copy would make the update conflict.
 	mr := &automationv1alpha1.ManagedResource{}
-	err := r.Get(ctx, req.NamespacedName, mr)
+	err := r.apiReader.Get(ctx, req.NamespacedName, mr)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, which means it was deleted
@@ -99,8 +112,6 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		return err
 	}
 
-	reconciler.Mutex.Lock()
-	defer reconciler.Mutex.Unlock()
 	if managedresource.Spec.NamespaceSelector.LabelSelector.MatchLabels == nil {
 		nsList, err = kube.GetNamespaces(ctx, r.config)
 		if err != nil {
@@ -113,26 +124,79 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		}
 	}
 
-	originalStatus := managedresource.Status.DeepCopy()
+	savedStatus := managedresource.Status.DeepCopy()
+	saveStatus := func(mr *automationv1alpha1.ManagedResource) error {
+		if !kube.AreManagedResourcesStatusDifferent(*savedStatus, mr.Status) {
+			return nil
+		}
+		managedResourceController.Info("Updating status", "name", mr.Name)
+		// Detached from the reconcile context so a shutdown mid-pass still records what it
+		// created; the timeout only bounds writes made after cancellation.
+		writeCtx := context.WithoutCancel(ctx)
+		if ctx.Err() != nil {
+			var cancel context.CancelFunc
+			writeCtx, cancel = context.WithTimeout(writeCtx, statusWriteTimeout)
+			defer cancel()
+		}
+		// Write a copy: the client decodes the server object into it, and after a retry that
+		// object can carry a newer spec than the one this pass is rendering.
+		toSave := mr.DeepCopy()
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			updateErr := r.Status().Update(writeCtx, toSave)
+			if !errors.IsConflict(updateErr) {
+				return updateErr
+			}
+			fresh := &automationv1alpha1.ManagedResource{}
+			if err := r.apiReader.Get(writeCtx, client.ObjectKeyFromObject(mr), fresh); err != nil {
+				return err
+			}
+			// Only write over a spec or metadata edit: status from another writer, or an
+			// object that was recreated or is being deleted, must not be overwritten.
+			changed := fresh.UID != mr.UID || fresh.DeletionTimestamp != nil ||
+				kube.AreManagedResourcesStatusDifferent(*savedStatus, fresh.Status)
+			if changed {
+				return fmt.Errorf("ManagedResource %q changed during the reconcile", mr.Name)
+			}
+			toSave.ResourceVersion = fresh.ResourceVersion
+			return updateErr
+		})
+		if err != nil {
+			return err
+		}
+		mr.ResourceVersion = toSave.ResourceVersion
+		savedStatus = toSave.Status.DeepCopy()
+		return nil
+	}
+
 	currentMR := managedresource
+	lastSave := time.Now()
 	for _, nsDef := range nsList.Items {
 		reconciledMR, reconcileErr := rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
+		if reconciledMR != nil {
+			currentMR = reconciledMR
+		}
 		if reconcileErr != nil {
 			// Persist any resources created before the failure so the status keeps tracking them.
-			if reconciledMR != nil && kube.AreManagedResourcesStatusDifferent(*originalStatus, reconciledMR.Status) {
-				_ = r.Status().Update(ctx, reconciledMR)
-			}
+			_ = saveStatus(currentMR)
 			return reconcileErr
 		}
-		currentMR = reconciledMR
+		if time.Since(lastSave) >= statusCheckpointInterval {
+			if err = saveStatus(currentMR); err != nil {
+				return err
+			}
+			lastSave = time.Now()
+		}
+	}
+	// Processing tracked resources can take longer than the namespace pass, so save the
+	// pass first rather than risk losing its tracking if the reconcile stops there.
+	if err = saveStatus(currentMR); err != nil {
+		return err
 	}
 
 	// Process existing resources in status field
 	err = rdr.ReconcileMRCreatedResources(ctx, currentMR)
 	if err != nil {
-		if kube.AreManagedResourcesStatusDifferent(*originalStatus, currentMR.Status) {
-			_ = r.Status().Update(ctx, currentMR)
-		}
+		_ = saveStatus(currentMR)
 		return err
 	}
 
@@ -143,11 +207,7 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		Message:            "All resources synced successfully",
 		ObservedGeneration: currentMR.Generation,
 	})
-	if !kube.AreManagedResourcesStatusDifferent(*originalStatus, currentMR.Status) {
-		return nil
-	}
-	managedResourceController.Info("Updating status", "name", currentMR.Name)
-	return r.Status().Update(ctx, currentMR)
+	return saveStatus(currentMR)
 }
 
 // SetupWithManager sets up the controller with the Manager.

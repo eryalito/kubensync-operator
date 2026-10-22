@@ -182,6 +182,12 @@ func TestAreManagedResourcesStatusDifferent(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "nil and empty created resources",
+			mr1:  automationv1alpha1.ManagedResourceStatus{CreatedResources: nil},
+			mr2:  automationv1alpha1.ManagedResourceStatus{CreatedResources: []automationv1alpha1.CreatedResource{}},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
