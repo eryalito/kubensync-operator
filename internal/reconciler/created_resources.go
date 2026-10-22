@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"slices"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
@@ -17,7 +18,8 @@ var (
 )
 
 func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedResource *automationv1alpha1.ManagedResource) error {
-	for _, createdResource := range managedResource.Status.CreatedResources {
+	// Iterate over a copy: removeResource shifts the remaining entries of the slice in place.
+	for _, createdResource := range slices.Clone(managedResource.Status.CreatedResources) {
 		// Check if the resource still exists
 		obj := &unstructured.Unstructured{}
 		obj.SetAPIVersion(createdResource.ApiVersion)

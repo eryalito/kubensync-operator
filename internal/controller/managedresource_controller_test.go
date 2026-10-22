@@ -618,4 +618,25 @@ metadata:
 			Expect(cm.Data).To(HaveKeyWithValue("value", "from-"+name), name)
 		}
 	})
+
+	It("removes every tracked resource whose namespace stops matching", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("unmatched", 3, configMapLiteral("unmatched", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(3))
+
+		By("narrowing the selector so that no namespace matches")
+		mr.Spec.NamespaceSelector.Regex = "^unmatched-none$"
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(BeEmpty())
+		for i := range 3 {
+			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: fmt.Sprintf("unmatched-%d", i), Name: "unmatched"}, &corev1.ConfigMap{})
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}
+	})
 })
