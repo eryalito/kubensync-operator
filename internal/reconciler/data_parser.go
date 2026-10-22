@@ -114,3 +114,30 @@ func parseCMData(ref automationv1alpha1.ManagedResourceSpecTemplateDataRef, clie
 	}
 	return data, nil
 }
+
+// deepCopyData copies the maps and slices of parsed template data; the values they hold are immutable.
+func deepCopyData(in map[string]interface{}) map[string]interface{} {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(in))
+	for key, value := range in {
+		out[key] = deepCopyValue(value)
+	}
+	return out
+}
+
+func deepCopyValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		return deepCopyData(v)
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i, element := range v {
+			out[i] = deepCopyValue(element)
+		}
+		return out
+	default:
+		return v
+	}
+}

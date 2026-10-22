@@ -524,4 +524,98 @@ metadata:
 		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
 		Expect(mr.Status.CreatedResources).To(HaveLen(2))
 	})
+
+	It("fetches template data once per reconcile", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("data-once", 3, configMapLiteral("data-once", `{{ index .Data.src "greeting" | quote }}`))
+		src := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-src", Namespace: "data-once-0"},
+			Data:       map[string]string{"greeting": "hello"},
+		}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "src",
+			Type: automationv1alpha1.ConfigMap,
+			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "data-src", Namespace: "data-once-0"},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		dataReads := 0
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+			if req.Method == http.MethodGet && req.URL.Path == "/api/v1/namespaces/data-once-0/configmaps/data-src" {
+				dataReads++
+			}
+			return next.RoundTrip(req)
+		}))
+
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dataReads).To(Equal(1))
+		for i := range 3 {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: fmt.Sprintf("data-once-%d", i), Name: "data-once"}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", "hello"))
+		}
+	})
+
+	It("gives each namespace its own copy of the template data", func() {
+		r, _ := newCountingReconciler()
+		literal := configMapLiteral("data-copy", `{{ hasKey "marker" .Data.src | quote }}{{ $_ := set "marker" "x" .Data.src }}`)
+		mr, req := createManagedResource("data-copy", 2, literal)
+		src := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-src", Namespace: "data-copy-0"},
+			Data:       map[string]string{"greeting": "hello"},
+		}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "src",
+			Type: automationv1alpha1.ConfigMap,
+			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "data-src", Namespace: "data-copy-0"},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		for _, ns := range []string{"data-copy-0", "data-copy-1"} {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: ns, Name: "data-copy"}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", "false"), ns)
+		}
+	})
+
+	It("keeps several ManagedResources apart when rendering a namespace", func() {
+		for _, name := range []string{"multi-a", "multi-b"} {
+			src := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name + "-src", Namespace: "default"}, Data: map[string]string{"v": "from-" + name}}
+			Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+			mr := &automationv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: automationv1alpha1.ManagedResourceSpec{
+					NamespaceSelector: automationv1alpha1.ManagedResourceSpecNamespaceSelector{Regex: "^multi-mr$"},
+					Template: automationv1alpha1.ManagedResourceSpecTemplate{
+						Literal: configMapLiteral(name, `{{ index .Data.src "v" | quote }}`),
+						Data: []automationv1alpha1.ManagedResourceSpecTemplateData{{
+							Name: "src",
+							Type: automationv1alpha1.ConfigMap,
+							Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: name + "-src", Namespace: "default"},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, mr)).To(Succeed())
+			DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, mr))).To(Succeed()) })
+		}
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "multi-mr"}}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, ns))).To(Succeed())
+		mrReconciler := newReconciler(k8sClient)
+		nsController := &NamespaceController{
+			Client: k8sClient, apiReader: k8sClient, config: cfg,
+			discoveryClient: mrReconciler.discoveryClient, dynamicClient: mrReconciler.dynamicClient,
+		}
+
+		Expect(nsController.reconcileNamespace(ctx, ns)).To(Succeed())
+		for _, name := range []string{"multi-a", "multi-b"} {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "multi-mr", Name: name}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", "from-"+name), name)
+		}
+	})
 })

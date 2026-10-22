@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -32,6 +33,15 @@ type Reconciler struct {
 	DynamicClient dynamic.Interface
 	RESTMapper    meta.RESTMapper
 	ownerRefs     []metav1.OwnerReference
+	// prepared holds the parsed template and data of the ManagedResource rendered last. Only one
+	// is kept: the namespace controller renders every ManagedResource into a single namespace.
+	prepared *preparedTemplate
+}
+
+type preparedTemplate struct {
+	uid  types.UID
+	tmpl *template.Template
+	data map[string]interface{}
 }
 
 var (
@@ -59,7 +69,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		return newMRDef, nil
 	}
 
-	manifests, err := r.renderTemplateForNamespace(mrDef.Spec.Template, namespace)
+	manifests, err := r.renderTemplateForNamespace(mrDef, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -236,22 +246,8 @@ func appendOwnerReference(list []metav1.OwnerReference, ref metav1.OwnerReferenc
 	return append(list, ref)
 }
 
-func (r *Reconciler) renderTemplateForNamespace(tpl automationv1alpha1.ManagedResourceSpecTemplate, namespace *corev1.Namespace) (string, error) {
-
-	handler := sprout.New()
-	// Add all the registries to the handler
-	err := handler.AddGroups(all.RegistryGroup())
-	if err != nil {
-		reconcilerLogger.Error(err, "Error adding registries")
-		return "", err
-	}
-
-	tmpl, err := template.New("").Funcs(handler.Build()).Parse(tpl.Literal)
-	if err != nil {
-		return "", err
-	}
-
-	refdata, err := r.getTemplateData(tpl.Data)
+func (r *Reconciler) renderTemplateForNamespace(mrDef *automationv1alpha1.ManagedResource, namespace *corev1.Namespace) (string, error) {
+	prepared, err := r.prepareTemplate(mrDef)
 	if err != nil {
 		return "", err
 	}
@@ -261,12 +257,42 @@ func (r *Reconciler) renderTemplateForNamespace(tpl automationv1alpha1.ManagedRe
 		Data      map[string]interface{}
 	}{
 		Namespace: *namespace.DeepCopy(),
-		Data:      refdata,
+		// Template functions such as set modify maps in place, so each namespace gets its own copy.
+		Data: deepCopyData(prepared.data),
 	}
 	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
+	err = prepared.tmpl.Execute(&buf, data)
 	if err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// prepareTemplate parses the template and fetches its data the first time mrDef renders in this
+// Reconciler, and reuses both for the remaining namespaces.
+func (r *Reconciler) prepareTemplate(mrDef *automationv1alpha1.ManagedResource) (*preparedTemplate, error) {
+	if r.prepared != nil && mrDef.UID != "" && r.prepared.uid == mrDef.UID {
+		return r.prepared, nil
+	}
+
+	handler := sprout.New()
+	// Add all the registries to the handler
+	err := handler.AddGroups(all.RegistryGroup())
+	if err != nil {
+		reconcilerLogger.Error(err, "Error adding registries")
+		return nil, err
+	}
+
+	tmpl, err := template.New("").Funcs(handler.Build()).Parse(mrDef.Spec.Template.Literal)
+	if err != nil {
+		return nil, err
+	}
+
+	refdata, err := r.getTemplateData(mrDef.Spec.Template.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	r.prepared = &preparedTemplate{uid: mrDef.UID, tmpl: tmpl, data: refdata}
+	return r.prepared, nil
 }
