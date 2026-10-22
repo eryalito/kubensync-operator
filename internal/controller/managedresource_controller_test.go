@@ -524,4 +524,62 @@ metadata:
 		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
 		Expect(mr.Status.CreatedResources).To(HaveLen(2))
 	})
+
+	It("fetches template data once per reconcile", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("data-once", 3, configMapLiteral("data-once", `{{ index .Data.src "greeting" | quote }}`))
+		src := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-src", Namespace: "data-once-0"},
+			Data:       map[string]string{"greeting": "hello"},
+		}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "src",
+			Type: automationv1alpha1.ConfigMap,
+			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "data-src", Namespace: "data-once-0"},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		dataReads := 0
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+			if req.Method == http.MethodGet && req.URL.Path == "/api/v1/namespaces/data-once-0/configmaps/data-src" {
+				dataReads++
+			}
+			return next.RoundTrip(req)
+		}))
+
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dataReads).To(Equal(1))
+		for i := range 3 {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: fmt.Sprintf("data-once-%d", i), Name: "data-once"}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", "hello"))
+		}
+	})
+
+	It("gives each namespace its own copy of the template data", func() {
+		r, _ := newCountingReconciler()
+		literal := configMapLiteral("data-copy",
+			`{{ if eq .Namespace.Name "data-copy-0" }}{{ $_ := set "marker" "x" .Data.src }}{{ end }}{{ hasKey "marker" .Data.src | quote }}`)
+		mr, req := createManagedResource("data-copy", 2, literal)
+		src := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-src", Namespace: "data-copy-0"},
+			Data:       map[string]string{"greeting": "hello"},
+		}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "src",
+			Type: automationv1alpha1.ConfigMap,
+			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "data-src", Namespace: "data-copy-0"},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		for ns, want := range map[string]string{"data-copy-0": "true", "data-copy-1": "false"} {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: ns, Name: "data-copy"}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", want), ns)
+		}
+	})
 })

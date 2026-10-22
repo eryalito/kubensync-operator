@@ -211,3 +211,22 @@ func TestAppendOwnerReference(t *testing.T) {
 		})
 	}
 }
+
+func TestDeepCopyData(t *testing.T) {
+	in := map[string]interface{}{
+		"cm":  map[string]interface{}{"key": "value"},
+		"obj": map[string]interface{}{"list": []interface{}{map[string]interface{}{"name": "a"}}},
+	}
+	out := deepCopyData(in)
+	if !reflect.DeepEqual(in, out) {
+		t.Fatalf("copy differs: %v vs %v", in, out)
+	}
+	out["cm"].(map[string]interface{})["key"] = "changed"
+	out["obj"].(map[string]interface{})["list"].([]interface{})[0].(map[string]interface{})["name"] = "b"
+	if in["cm"].(map[string]interface{})["key"] != "value" {
+		t.Fatal("changing the copy changed a nested map of the original")
+	}
+	if in["obj"].(map[string]interface{})["list"].([]interface{})[0].(map[string]interface{})["name"] != "a" {
+		t.Fatal("changing the copy changed a map inside a list of the original")
+	}
+}
