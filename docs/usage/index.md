@@ -82,10 +82,13 @@ spec:
     ```
 
 !!! question
-    - `avoidResourceUpdate`: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is `false`.
+    - `avoidResourceUpdate`: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is `false`. Existing resources are then left untouched: they are not adopted, so they are not deleted with the ManagedResource.
     - `namespaceSelector`: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces or filter them by its labels. Regex and labels are ANDed, the namespaces must match both of them to be selected. If none of them are defined, all namespaces will be selected.
     - `template`: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.
     - `template.data`: Optional field that read Kubernetes resources and expose their contents to be used in the `template` under `.Data.<name>`.
+
+!!! note
+    Resources a ManagedResource creates, and existing resources it updates, get it as their owner, so deleting the ManagedResource deletes them too. Recreating it creates them again from the template, so manual changes made to them are lost.
 
 ## Status
 
