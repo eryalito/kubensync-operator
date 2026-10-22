@@ -78,10 +78,6 @@ func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedRes
 			}
 
 		}
-		err = kube.UpdateStatus(managedResource, ctx)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }

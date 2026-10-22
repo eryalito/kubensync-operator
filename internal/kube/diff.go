@@ -1,8 +1,9 @@
 package kube
 
 import (
-	"reflect"
 	"sort"
+
+	"k8s.io/apimachinery/pkg/api/equality"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 )
@@ -14,5 +15,5 @@ func AreManagedResourcesStatusDifferent(mr1, mr2 automationv1alpha1.ManagedResou
 	sort.SliceStable(mr2.CreatedResources, func(i, j int) bool {
 		return mr2.CreatedResources[i].UID < mr2.CreatedResources[j].UID
 	})
-	return !reflect.DeepEqual(mr1, mr2)
+	return !equality.Semantic.DeepEqual(mr1, mr2)
 }
