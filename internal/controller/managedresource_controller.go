@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -40,8 +41,10 @@ import (
 // ManagedResourceReconciler reconciles a ManagedResource object
 type ManagedResourceReconciler struct {
 	client.Client
-	apiReader client.Reader
-	config    *rest.Config
+	apiReader     client.Reader
+	config        *rest.Config
+	restMapper    apimeta.RESTMapper
+	dynamicClient dynamic.Interface
 }
 
 var managedResourceController = ctrl.Log.WithName("managedresource_controller")
@@ -104,7 +107,7 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context, managedresource *automationv1alpha1.ManagedResource) error {
 	var err error
 	var nsList *corev1.NamespaceList
-	rdr := reconciler.Reconciler{RestConfig: r.config}
+	rdr := reconciler.Reconciler{RestConfig: r.config, RESTMapper: r.restMapper, DynamicClient: r.dynamicClient}
 
 	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 
@@ -214,6 +217,12 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
 	r.apiReader = mgr.GetAPIReader()
+	r.restMapper = mgr.GetRESTMapper()
+	dynamicClient, err := dynamic.NewForConfigAndClient(mgr.GetConfig(), mgr.GetHTTPClient())
+	if err != nil {
+		return err
+	}
+	r.dynamicClient = dynamicClient
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&automationv1alpha1.ManagedResource{}).
 		Named("managedresource").

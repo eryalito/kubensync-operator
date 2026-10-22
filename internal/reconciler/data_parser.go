@@ -8,11 +8,12 @@ import (
 	"github.com/eryalito/kubensync-operator/internal/kube"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -21,23 +22,19 @@ var (
 	dataPerserLoggerDebug = ctrl.Log.WithName("data_parser").V((1))
 )
 
-func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, config *rest.Config) (map[string]interface{}, error) {
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		dataPerserLogger.Error(err, "Error creating Kubernetes client")
-		return nil, err
-	}
+func (r *Reconciler) getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData) (map[string]interface{}, error) {
+	var err error
 	parsedData := make(map[string]interface{})
 	for _, dataelement := range data {
 		dataPerserLoggerDebug.Info("Parsing data element", "name", dataelement.Name, "type", dataelement.Type)
 		var refData map[string]interface{}
 		switch dataelement.Type {
 		case automationv1alpha1.Secret:
-			refData, err = parseSecretData(dataelement.Ref, clientset)
+			refData, err = parseSecretData(dataelement.Ref, r.Clientset)
 		case automationv1alpha1.ConfigMap:
-			refData, err = parseCMData(dataelement.Ref, clientset)
+			refData, err = parseCMData(dataelement.Ref, r.Clientset)
 		case automationv1alpha1.KubernetesResource:
-			refData, err = parseKubernetesResourceData(dataelement.Ref, config)
+			refData, err = parseKubernetesResourceData(dataelement.Ref, r.RESTMapper, r.DynamicClient)
 		default:
 			err = fmt.Errorf("unsupported data type: %s", dataelement.Type)
 		}
@@ -50,7 +47,7 @@ func getTemplateData(data []automationv1alpha1.ManagedResourceSpecTemplateData, 
 	return parsedData, nil
 }
 
-func parseKubernetesResourceData(managedResourceSpecTemplateDataRef automationv1alpha1.ManagedResourceSpecTemplateDataRef, config *rest.Config) (map[string]interface{}, error) {
+func parseKubernetesResourceData(managedResourceSpecTemplateDataRef automationv1alpha1.ManagedResourceSpecTemplateDataRef, mapper meta.RESTMapper, dyn dynamic.Interface) (map[string]interface{}, error) {
 	unstructuredObj := &unstructured.Unstructured{}
 	unstructuredObj.SetName(managedResourceSpecTemplateDataRef.Name)
 	unstructuredObj.SetNamespace(managedResourceSpecTemplateDataRef.Namespace)
@@ -59,7 +56,7 @@ func parseKubernetesResourceData(managedResourceSpecTemplateDataRef automationv1
 		Version: managedResourceSpecTemplateDataRef.ApiVersion,
 		Kind:    managedResourceSpecTemplateDataRef.Kind,
 	})
-	ri, err := kube.GetResourceInterfaceForUnstructured(unstructuredObj, config)
+	ri, err := kube.GetResourceInterfaceForUnstructured(unstructuredObj, mapper, dyn)
 	if err != nil {
 		dataPerserLogger.Error(err, "Error getting resource interface")
 		return nil, err

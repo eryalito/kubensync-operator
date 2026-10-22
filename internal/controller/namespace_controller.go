@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -21,8 +22,10 @@ import (
 // NamespaceController reconciles Custom Resources and responds to namespace events.
 type NamespaceController struct {
 	client.Client
-	apiReader client.Reader
-	config    *rest.Config
+	apiReader     client.Reader
+	config        *rest.Config
+	restMapper    apimeta.RESTMapper
+	dynamicClient dynamic.Interface
 }
 
 var namespaceControllerLogger = ctrl.Log.WithName("namespace_controller")
@@ -55,6 +58,12 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 func (r *NamespaceController) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
 	r.apiReader = mgr.GetAPIReader()
+	r.restMapper = mgr.GetRESTMapper()
+	dynamicClient, err := dynamic.NewForConfigAndClient(mgr.GetConfig(), mgr.GetHTTPClient())
+	if err != nil {
+		return err
+	}
+	r.dynamicClient = dynamicClient
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Namespace{}).
 		Complete(r)
@@ -63,7 +72,7 @@ func (r *NamespaceController) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NamespaceController) reconcileNamespace(ctx context.Context, namespace *corev1.Namespace) error {
 	var err error
 	var mrDefList automationv1alpha1.ManagedResourceList
-	rdr := reconciler.Reconciler{RestConfig: r.config}
+	rdr := reconciler.Reconciler{RestConfig: r.config, RESTMapper: r.restMapper, DynamicClient: r.dynamicClient}
 
 	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 

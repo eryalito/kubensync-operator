@@ -30,15 +30,35 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 )
+
+// newReconciler returns a reconciler that uses c for the ManagedResource and cfg for everything else.
+func newReconciler(c client.Client) *ManagedResourceReconciler {
+	httpClient, err := rest.HTTPClientFor(cfg)
+	Expect(err).NotTo(HaveOccurred())
+	mapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
+	Expect(err).NotTo(HaveOccurred())
+	r := &ManagedResourceReconciler{Client: c, apiReader: c, restMapper: mapper}
+	setConfig(r, cfg)
+	return r
+}
+
+// setConfig points the reconciler's requests for templated resources at c.
+func setConfig(r *ManagedResourceReconciler, c *rest.Config) {
+	r.config = c
+	r.dynamicClient = dynamic.NewForConfigOrDie(c)
+}
 
 // newCountingReconciler returns a reconciler whose status writes are counted.
 func newCountingReconciler() (*ManagedResourceReconciler, *int) {
@@ -55,7 +75,7 @@ func newCountingReconciler() (*ManagedResourceReconciler, *int) {
 			return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
 		},
 	})
-	return &ManagedResourceReconciler{Client: c, apiReader: c, config: cfg}, &statusWrites
+	return newReconciler(c), &statusWrites
 }
 
 // createManagedResource creates count namespaces named prefix-N and a ManagedResource
@@ -105,7 +125,7 @@ func newReconcilerWithStatusHook(hook func(name string)) *ManagedResourceReconci
 			return c.SubResource(subResource).Update(ctx, obj, opts...)
 		},
 	})
-	return &ManagedResourceReconciler{Client: c, apiReader: c, config: cfg}
+	return newReconciler(c)
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -115,12 +135,12 @@ func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 // recordConfigMapNamespaces makes r record the namespaces whose ConfigMaps it touches.
 func recordConfigMapNamespaces(r *ManagedResourceReconciler) map[string]bool {
 	touched := map[string]bool{}
-	r.config = configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+	setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
 		if strings.Contains(req.URL.Path, "/configmaps") {
 			touched[strings.Split(strings.TrimPrefix(req.URL.Path, "/api/v1/namespaces/"), "/")[0]] = true
 		}
 		return next.RoundTrip(req)
-	})
+	}))
 	return touched
 }
 
@@ -293,7 +313,7 @@ metadata:
 		reconcileCtx, cancelReconcile := context.WithCancel(ctx)
 		DeferCleanup(cancelReconcile)
 		creates := 0
-		r.config = configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
 			if creates == 3 {
 				cancelReconcile()
 			}
@@ -302,7 +322,7 @@ metadata:
 				creates++
 			}
 			return resp, err
-		})
+		}))
 		mr, req := createManagedResource("cancelled", 4, configMapLiteral("cancelled", "ok"))
 
 		_, err := r.Reconcile(reconcileCtx, req)
@@ -322,7 +342,7 @@ metadata:
 		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
 		mr.Spec.Template.Literal = configMapLiteral("target-conflict", "changed")
 		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
-		r.config = configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
 			if req.Method != http.MethodPut || !strings.Contains(req.URL.Path, "/configmaps/") {
 				return next.RoundTrip(req)
 			}
@@ -333,7 +353,7 @@ metadata:
 				Body:       io.NopCloser(strings.NewReader(body)),
 				Request:    req,
 			}, nil
-		})
+		}))
 
 		_, err = r.Reconcile(ctx, req)
 		Expect(apierrors.IsConflict(err)).To(BeTrue())
@@ -385,5 +405,52 @@ metadata:
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "recreated-0", Name: "recreated"}, cm)).To(Succeed())
 		Expect(cm.OwnerReferences).To(HaveLen(1))
 		Expect(cm.OwnerReferences[0].UID).To(Equal(recreated.UID))
+	})
+
+	It("resolves kinds from CRDs installed after the reconciler started", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("late-crd", 1, configMapLiteral("late-crd", "ok"))
+
+		By("warming up the reconciler's RESTMapper before the CRD exists")
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		crd := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "apiextensions.k8s.io/v1",
+			"kind":       "CustomResourceDefinition",
+			"metadata":   map[string]interface{}{"name": "widgets.late.kubensync.com"},
+			"spec": map[string]interface{}{
+				"group": "late.kubensync.com",
+				"scope": "Namespaced",
+				"names": map[string]interface{}{"plural": "widgets", "singular": "widget", "kind": "Widget", "listKind": "WidgetList"},
+				"versions": []interface{}{map[string]interface{}{
+					"name": "v1", "served": true, "storage": true,
+					"schema": map[string]interface{}{"openAPIV3Schema": map[string]interface{}{
+						"type": "object", "x-kubernetes-preserve-unknown-fields": true,
+					}},
+				}},
+			},
+		}}
+		Expect(k8sClient.Create(ctx, crd)).To(Succeed())
+		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, crd))).To(Succeed()) })
+
+		By("rendering a resource of the new kind")
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		mr.Spec.Template.Literal = `apiVersion: late.kubensync.com/v1
+kind: Widget
+metadata:
+  name: late-crd
+  namespace: {{ .Namespace.Name }}
+`
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		Eventually(func() error {
+			_, err := r.Reconcile(ctx, req)
+			return err
+		}).WithTimeout(30 * time.Second).WithPolling(500 * time.Millisecond).Should(Succeed())
+
+		widget := &unstructured.Unstructured{}
+		widget.SetAPIVersion("late.kubensync.com/v1")
+		widget.SetKind("Widget")
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "late-crd-0", Name: "late-crd"}, widget)).To(Succeed())
 	})
 })

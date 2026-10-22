@@ -3,26 +3,13 @@ package kube
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
 )
 
-func GetResourceInterfaceForUnstructured(unstructured *unstructured.Unstructured, config *rest.Config) (dynamic.ResourceInterface, error) {
+func GetResourceInterfaceForUnstructured(unstructured *unstructured.Unstructured, mapper meta.RESTMapper, dyn dynamic.Interface) (dynamic.ResourceInterface, error) {
 	gvk := unstructured.GetObjectKind().GroupVersionKind()
 
-	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
-	gr, err := restmapper.GetAPIGroupResources(dc)
-	if err != nil {
-		return nil, err
-	}
-	rm := restmapper.NewDiscoveryRESTMapper(gr)
-	mapping, err := rm.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return nil, err
-	}
-	dyn, err := dynamic.NewForConfig(config)
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return nil, err
 	}
