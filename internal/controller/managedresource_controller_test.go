@@ -559,8 +559,7 @@ metadata:
 
 	It("gives each namespace its own copy of the template data", func() {
 		r, _ := newCountingReconciler()
-		literal := configMapLiteral("data-copy",
-			`{{ if eq .Namespace.Name "data-copy-0" }}{{ $_ := set "marker" "x" .Data.src }}{{ end }}{{ hasKey "marker" .Data.src | quote }}`)
+		literal := configMapLiteral("data-copy", `{{ hasKey "marker" .Data.src | quote }}{{ $_ := set "marker" "x" .Data.src }}`)
 		mr, req := createManagedResource("data-copy", 2, literal)
 		src := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: "data-src", Namespace: "data-copy-0"},
@@ -576,10 +575,74 @@ metadata:
 
 		_, err := r.Reconcile(ctx, req)
 		Expect(err).NotTo(HaveOccurred())
-		for ns, want := range map[string]string{"data-copy-0": "true", "data-copy-1": "false"} {
+		for _, ns := range []string{"data-copy-0", "data-copy-1"} {
 			cm := &corev1.ConfigMap{}
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: ns, Name: "data-copy"}, cm)).To(Succeed())
-			Expect(cm.Data).To(HaveKeyWithValue("value", want), ns)
+			Expect(cm.Data).To(HaveKeyWithValue("value", "false"), ns)
+		}
+	})
+
+	It("reads its own output again after writing one of its data refs", func() {
+		r, _ := newCountingReconciler()
+		literal := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acc-out
+  namespace: acc-0
+data:
+  value: {{ printf "%s,%s" (index .Data.prev "value") .Namespace.Name | quote }}
+`
+		mr, req := createManagedResource("acc", 3, literal)
+		out := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "acc-out", Namespace: "acc-0"}, Data: map[string]string{"value": "start"}}
+		Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, out))).To(Succeed())
+		Expect(k8sClient.Create(ctx, out)).To(Succeed())
+		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
+			Name: "prev",
+			Type: automationv1alpha1.ConfigMap,
+			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "acc-out", Namespace: "acc-0"},
+		}}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(out), out)).To(Succeed())
+		Expect(out.Data).To(HaveKeyWithValue("value", "start,acc-0,acc-1,acc-2"))
+	})
+
+	It("keeps several ManagedResources apart when rendering a namespace", func() {
+		for _, name := range []string{"multi-a", "multi-b"} {
+			src := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name + "-src", Namespace: "default"}, Data: map[string]string{"v": "from-" + name}}
+			Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, src))).To(Succeed())
+			mr := &automationv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: automationv1alpha1.ManagedResourceSpec{
+					NamespaceSelector: automationv1alpha1.ManagedResourceSpecNamespaceSelector{Regex: "^multi-mr$"},
+					Template: automationv1alpha1.ManagedResourceSpecTemplate{
+						Literal: configMapLiteral(name, `{{ index .Data.src "v" | quote }}`),
+						Data: []automationv1alpha1.ManagedResourceSpecTemplateData{{
+							Name: "src",
+							Type: automationv1alpha1.ConfigMap,
+							Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: name + "-src", Namespace: "default"},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, mr)).To(Succeed())
+			DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, mr))).To(Succeed()) })
+		}
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "multi-mr"}}
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, ns))).To(Succeed())
+		mrReconciler := newReconciler(k8sClient)
+		nsController := &NamespaceController{
+			Client: k8sClient, apiReader: k8sClient, config: cfg,
+			discoveryClient: mrReconciler.discoveryClient, dynamicClient: mrReconciler.dynamicClient,
+		}
+
+		Expect(nsController.reconcileNamespace(ctx, ns)).To(Succeed())
+		for _, name := range []string{"multi-a", "multi-b"} {
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "multi-mr", Name: name}, cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKeyWithValue("value", "from-"+name), name)
 		}
 	})
 })

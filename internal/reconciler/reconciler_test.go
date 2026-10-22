@@ -7,7 +7,10 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+
+	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 )
 
 const (
@@ -228,5 +231,44 @@ func TestDeepCopyData(t *testing.T) {
 	}
 	if in["obj"].(map[string]interface{})["list"].([]interface{})[0].(map[string]interface{})["name"] != "a" {
 		t.Fatal("changing the copy changed a map inside a list of the original")
+	}
+	missing := deepCopyData(map[string]interface{}{"absent": map[string]interface{}(nil)})["absent"]
+	if m, ok := missing.(map[string]interface{}); !ok || m != nil {
+		t.Fatalf("a missing resource must stay a nil map, got %#v", missing)
+	}
+}
+
+func TestIsTemplateDataRef(t *testing.T) {
+	data := []automationv1alpha1.ManagedResourceSpecTemplateData{
+		{Name: "cm", Type: automationv1alpha1.ConfigMap, Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "src", Namespace: "ns"}},
+		{Name: "crb", Type: automationv1alpha1.KubernetesResource, Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{
+			Group: "rbac.authorization.k8s.io", ApiVersion: "v1", Kind: "ClusterRoleBinding", Name: "tenants", Namespace: "ignored",
+		}},
+	}
+	object := func(apiVersion, kind, namespace, name string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetAPIVersion(apiVersion)
+		obj.SetKind(kind)
+		obj.SetNamespace(namespace)
+		obj.SetName(name)
+		return obj
+	}
+	tests := []struct {
+		name string
+		obj  *unstructured.Unstructured
+		want bool
+	}{
+		{"same ConfigMap", object("v1", "ConfigMap", "ns", "src"), true},
+		{"ConfigMap in another namespace", object("v1", "ConfigMap", "other", "src"), false},
+		{"Secret with the same name", object("v1", "Secret", "ns", "src"), false},
+		{"cluster-scoped ref with a namespace set", object("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", "tenants"), true},
+		{"other object", object("v1", "ConfigMap", "ns", "out"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isTemplateDataRef(data, tt.obj); got != tt.want {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
 	}
 }

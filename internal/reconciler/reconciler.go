@@ -33,11 +33,13 @@ type Reconciler struct {
 	DynamicClient dynamic.Interface
 	RESTMapper    meta.RESTMapper
 	ownerRefs     []metav1.OwnerReference
-	// templates holds each ManagedResource's parsed template and data for the life of the Reconciler.
-	templates map[types.UID]*preparedTemplate
+	// prepared holds the parsed template and data of the ManagedResource rendered last. Only one
+	// is kept: the namespace controller renders every ManagedResource into a single namespace.
+	prepared *preparedTemplate
 }
 
 type preparedTemplate struct {
+	uid  types.UID
 	tmpl *template.Template
 	data map[string]interface{}
 }
@@ -120,6 +122,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 				return nil, err
 			}
 			uid = string(uns.GetUID())
+			r.invalidateTemplateData(mrDef, obj)
 		} else if !mrDef.Spec.AvoidResourceUpdate {
 			obj.SetResourceVersion(getObj.GetResourceVersion())
 			obj.SetUID(getObj.GetUID())
@@ -129,6 +132,7 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 				if err != nil {
 					return nil, err
 				}
+				r.invalidateTemplateData(mrDef, obj)
 			}
 		}
 		createdObject := automationv1alpha1.CreatedResource{
@@ -269,8 +273,8 @@ func (r *Reconciler) renderTemplateForNamespace(mrDef *automationv1alpha1.Manage
 // prepareTemplate parses the template and fetches its data the first time mrDef renders in this
 // Reconciler, and reuses both for the remaining namespaces.
 func (r *Reconciler) prepareTemplate(mrDef *automationv1alpha1.ManagedResource) (*preparedTemplate, error) {
-	if prepared, ok := r.templates[mrDef.UID]; ok {
-		return prepared, nil
+	if r.prepared != nil && mrDef.UID != "" && r.prepared.uid == mrDef.UID {
+		return r.prepared, nil
 	}
 
 	handler := sprout.New()
@@ -291,10 +295,14 @@ func (r *Reconciler) prepareTemplate(mrDef *automationv1alpha1.ManagedResource) 
 		return nil, err
 	}
 
-	prepared := &preparedTemplate{tmpl: tmpl, data: refdata}
-	if r.templates == nil {
-		r.templates = map[types.UID]*preparedTemplate{}
+	r.prepared = &preparedTemplate{uid: mrDef.UID, tmpl: tmpl, data: refdata}
+	return r.prepared, nil
+}
+
+// invalidateTemplateData drops the prepared template when obj is one of mrDef's data refs, so the
+// remaining namespaces read what was just written, as they did when data was fetched per namespace.
+func (r *Reconciler) invalidateTemplateData(mrDef *automationv1alpha1.ManagedResource, obj *unstructured.Unstructured) {
+	if isTemplateDataRef(mrDef.Spec.Template.Data, obj) {
+		r.prepared = nil
 	}
-	r.templates[mrDef.UID] = prepared
-	return prepared, nil
 }
