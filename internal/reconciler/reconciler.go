@@ -122,7 +122,6 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 				return nil, err
 			}
 			uid = string(uns.GetUID())
-			r.invalidateTemplateData(mrDef, obj)
 		} else if !mrDef.Spec.AvoidResourceUpdate {
 			obj.SetResourceVersion(getObj.GetResourceVersion())
 			obj.SetUID(getObj.GetUID())
@@ -132,7 +131,6 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 				if err != nil {
 					return nil, err
 				}
-				r.invalidateTemplateData(mrDef, obj)
 			}
 		}
 		createdObject := automationv1alpha1.CreatedResource{
@@ -297,12 +295,4 @@ func (r *Reconciler) prepareTemplate(mrDef *automationv1alpha1.ManagedResource) 
 
 	r.prepared = &preparedTemplate{uid: mrDef.UID, tmpl: tmpl, data: refdata}
 	return r.prepared, nil
-}
-
-// invalidateTemplateData drops the prepared template when obj is one of mrDef's data refs, so the
-// remaining namespaces read what was just written, as they did when data was fetched per namespace.
-func (r *Reconciler) invalidateTemplateData(mrDef *automationv1alpha1.ManagedResource, obj *unstructured.Unstructured) {
-	if isTemplateDataRef(mrDef.Spec.Template.Data, obj) {
-		r.prepared = nil
-	}
 }

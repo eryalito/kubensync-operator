@@ -141,23 +141,3 @@ func deepCopyValue(value interface{}) interface{} {
 		return v
 	}
 }
-
-// isTemplateDataRef reports whether obj is one of the resources read as template data.
-func isTemplateDataRef(data []automationv1alpha1.ManagedResourceSpecTemplateData, obj *unstructured.Unstructured) bool {
-	gvk := obj.GroupVersionKind()
-	for _, dataelement := range data {
-		group, kind := dataelement.Ref.Group, dataelement.Ref.Kind
-		switch dataelement.Type {
-		case automationv1alpha1.Secret:
-			group, kind = "", "Secret"
-		case automationv1alpha1.ConfigMap:
-			group, kind = "", "ConfigMap"
-		}
-		// Cluster-scoped objects are read regardless of the namespace set on the ref.
-		sameNamespace := obj.GetNamespace() == "" || obj.GetNamespace() == dataelement.Ref.Namespace
-		if gvk.Group == group && gvk.Kind == kind && obj.GetName() == dataelement.Ref.Name && sameNamespace {
-			return true
-		}
-	}
-	return false
-}

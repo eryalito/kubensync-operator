@@ -582,33 +582,6 @@ metadata:
 		}
 	})
 
-	It("reads its own output again after writing one of its data refs", func() {
-		r, _ := newCountingReconciler()
-		literal := `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: acc-out
-  namespace: acc-0
-data:
-  value: {{ printf "%s,%s" (index .Data.prev "value") .Namespace.Name | quote }}
-`
-		mr, req := createManagedResource("acc", 3, literal)
-		out := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "acc-out", Namespace: "acc-0"}, Data: map[string]string{"value": "start"}}
-		Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, out))).To(Succeed())
-		Expect(k8sClient.Create(ctx, out)).To(Succeed())
-		mr.Spec.Template.Data = []automationv1alpha1.ManagedResourceSpecTemplateData{{
-			Name: "prev",
-			Type: automationv1alpha1.ConfigMap,
-			Ref:  automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "acc-out", Namespace: "acc-0"},
-		}}
-		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
-
-		_, err := r.Reconcile(ctx, req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(out), out)).To(Succeed())
-		Expect(out.Data).To(HaveKeyWithValue("value", "start,acc-0,acc-1,acc-2"))
-	})
-
 	It("keeps several ManagedResources apart when rendering a namespace", func() {
 		for _, name := range []string{"multi-a", "multi-b"} {
 			src := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name + "-src", Namespace: "default"}, Data: map[string]string{"v": "from-" + name}}
