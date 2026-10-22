@@ -21,7 +21,8 @@ import (
 // NamespaceController reconciles Custom Resources and responds to namespace events.
 type NamespaceController struct {
 	client.Client
-	config *rest.Config
+	apiReader client.Reader
+	config    *rest.Config
 }
 
 var namespaceControllerLogger = ctrl.Log.WithName("namespace_controller")
@@ -43,7 +44,7 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 		// Object is being deleted
 		return reconcile.Result{}, nil
 	}
-	err = reconcileNamespace(ctx, r.config, ns)
+	err = r.reconcileNamespace(ctx, ns)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -53,17 +54,18 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 // Watch for Namespace events.
 func (r *NamespaceController) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
+	r.apiReader = mgr.GetAPIReader()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Namespace{}).
 		Complete(r)
 }
 
-func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *corev1.Namespace) error {
+func (r *NamespaceController) reconcileNamespace(ctx context.Context, namespace *corev1.Namespace) error {
 	var err error
 	var mrDefList automationv1alpha1.ManagedResourceList
-	rdr := reconciler.Reconciler{RestConfig: config}
+	rdr := reconciler.Reconciler{RestConfig: r.config}
 
-	rdr.Clientset, err = kubernetes.NewForConfig(config)
+	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 
 	if err != nil {
 		return err
@@ -71,7 +73,9 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 
 	reconciler.Mutex.Lock()
 	defer reconciler.Mutex.Unlock()
-	mrDefList, err = kube.GetManagedResources(ctx)
+	// Read from the API server: the cache can lag behind status the ManagedResource
+	// controller just wrote, and updating status from a stale copy would conflict.
+	err = r.apiReader.List(ctx, &mrDefList)
 	if err != nil {
 		return err
 	}
@@ -92,12 +96,12 @@ func reconcileNamespace(ctx context.Context, config *rest.Config, namespace *cor
 				Message:            err.Error(),
 				ObservedGeneration: statusMR.Generation,
 			})
-			_ = kube.UpdateStatus(statusMR, ctx)
+			_ = r.Status().Update(ctx, statusMR)
 			return err
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
 			namespaceControllerLogger.Info("Updating status", "name", newMRDef.Name)
-			err = kube.UpdateStatus(newMRDef, ctx)
+			err = r.Status().Update(ctx, newMRDef)
 			if err != nil {
 				return err
 			}

@@ -37,7 +37,8 @@ import (
 // ManagedResourceReconciler reconciles a ManagedResource object
 type ManagedResourceReconciler struct {
 	client.Client
-	config *rest.Config
+	apiReader client.Reader
+	config    *rest.Config
 }
 
 var managedResourceController = ctrl.Log.WithName("managedresource_controller")
@@ -69,10 +70,10 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// Object is being deleted
 		return ctrl.Result{}, nil
 	}
-	err = reconcileManagedResource(ctx, r.config, mr)
+	err = r.reconcileManagedResource(ctx, mr)
 	if err != nil {
-		freshMR, fetchErr := kube.GetManagedResource(ctx, mr.GetName())
-		if fetchErr == nil {
+		freshMR := &automationv1alpha1.ManagedResource{}
+		if fetchErr := r.apiReader.Get(ctx, req.NamespacedName, freshMR); fetchErr == nil {
 			apimeta.SetStatusCondition(&freshMR.Status.Conditions, metav1.Condition{
 				Type:               automationv1alpha1.ConditionReady,
 				Status:             metav1.ConditionFalse,
@@ -80,19 +81,19 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				Message:            err.Error(),
 				ObservedGeneration: freshMR.Generation,
 			})
-			_ = kube.UpdateStatus(freshMR, ctx)
+			_ = r.Status().Update(ctx, freshMR)
 		}
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func reconcileManagedResource(ctx context.Context, config *rest.Config, managedresource *automationv1alpha1.ManagedResource) error {
+func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context, managedresource *automationv1alpha1.ManagedResource) error {
 	var err error
 	var nsList *corev1.NamespaceList
-	rdr := reconciler.Reconciler{RestConfig: config}
+	rdr := reconciler.Reconciler{RestConfig: r.config}
 
-	rdr.Clientset, err = kubernetes.NewForConfig(config)
+	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 
 	if err != nil {
 		return err
@@ -101,41 +102,37 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 	reconciler.Mutex.Lock()
 	defer reconciler.Mutex.Unlock()
 	if managedresource.Spec.NamespaceSelector.LabelSelector.MatchLabels == nil {
-		nsList, err = kube.GetNamespaces(ctx, config)
+		nsList, err = kube.GetNamespaces(ctx, r.config)
 		if err != nil {
 			return err
 		}
 	} else {
-		nsList, err = kube.GetNamespacesByLabel(ctx, config, managedresource.Spec.NamespaceSelector.LabelSelector)
+		nsList, err = kube.GetNamespacesByLabel(ctx, r.config, managedresource.Spec.NamespaceSelector.LabelSelector)
 		if err != nil {
 			return err
 		}
 	}
 
+	originalStatus := managedresource.Status.DeepCopy()
 	currentMR := managedresource
 	for _, nsDef := range nsList.Items {
-		originalMRDef := currentMR.DeepCopy()
 		reconciledMR, reconcileErr := rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
 		if reconcileErr != nil {
 			// Persist any resources created before the failure so the status keeps tracking them.
-			if reconciledMR != nil && kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, reconciledMR.Status) {
-				_ = kube.UpdateStatus(reconciledMR, ctx)
+			if reconciledMR != nil && kube.AreManagedResourcesStatusDifferent(*originalStatus, reconciledMR.Status) {
+				_ = r.Status().Update(ctx, reconciledMR)
 			}
 			return reconcileErr
 		}
 		currentMR = reconciledMR
-		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, currentMR.Status) {
-			managedResourceController.Info("Updating status", "name", currentMR.Name)
-			err = kube.UpdateStatus(currentMR, ctx)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	// Process existing resources in status field
 	err = rdr.ReconcileMRCreatedResources(ctx, currentMR)
 	if err != nil {
+		if kube.AreManagedResourcesStatusDifferent(*originalStatus, currentMR.Status) {
+			_ = r.Status().Update(ctx, currentMR)
+		}
 		return err
 	}
 
@@ -146,12 +143,17 @@ func reconcileManagedResource(ctx context.Context, config *rest.Config, managedr
 		Message:            "All resources synced successfully",
 		ObservedGeneration: currentMR.Generation,
 	})
-	return kube.UpdateStatus(currentMR, ctx)
+	if !kube.AreManagedResourcesStatusDifferent(*originalStatus, currentMR.Status) {
+		return nil
+	}
+	managedResourceController.Info("Updating status", "name", currentMR.Name)
+	return r.Status().Update(ctx, currentMR)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.config = mgr.GetConfig()
+	r.apiReader = mgr.GetAPIReader()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&automationv1alpha1.ManagedResource{}).
 		Named("managedresource").
