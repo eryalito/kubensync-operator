@@ -88,13 +88,29 @@ spec:
     - `template.data`: Optional field that read Kubernetes resources and expose their contents to be used in the `template` under `.Data.<name>`. Set `watch: true` on an entry to reconcile the ManagedResource whenever that resource changes, see [watching data](../reference/template-data.md#watching-data).
 
 !!! note
-    Resources a ManagedResource creates, and existing resources it updates, get it as their owner, so deleting the ManagedResource deletes them too. Recreating it creates them again from the template, so manual changes made to them are lost.
+    Resources a ManagedResource creates, and existing resources it updates, get it as their owner, so deleting the ManagedResource deletes them too. Recreating it creates them again from the template, so manual changes made to them are lost. With `avoidResourceUpdate: true` a recreated ManagedResource does not take over existing resources, so they are deleted with the old one and only created again on the next reconcile.
 
 !!! note
     When a namespace stops matching the `namespaceSelector`, because a label is removed or the namespace is deleted, the resources rendered for it are deleted right away, including cluster-scoped resources and resources in other namespaces.
 
 !!! warning
     A resource that every namespace renders the same way, such as a `ClusterRole` with a fixed name, is tracked under only one of those namespaces. When that namespace stops matching or is deleted, the resource is deleted as well, and it is only created again on the next reconcile of the ManagedResource or of another matching namespace. Until then, anything that references it, such as the RoleBindings of the other namespaces, stops working. Create such shared resources manually, or with a dedicated ManagedResource whose `namespaceSelector` matches a single namespace.
+
+## When a ManagedResource is reconciled
+
+A ManagedResource renders its template into every matching namespace, and removes the resources it no longer renders:
+
+- when it is created, or its spec, labels or annotations change;
+- when a resource referenced in `template.data` with `watch: true` changes, see [watching data](../reference/template-data.md#watching-data);
+- when the operator starts, and periodically, about every 10 hours.
+
+A namespace event (a namespace is created, relabelled or deleted) renders the template only into that namespace, or removes the resources rendered for it when it no longer matches.
+
+Changes to the status of the ManagedResource, to the resources it renders, and to data resources that are not watched do not trigger a reconcile. To force one, change an annotation:
+
+```bash
+kubectl annotate managedresource managedresource-sample kubensync.com/reconcile="$(date +%s)" --overwrite
+```
 
 ## Status
 
@@ -114,7 +130,10 @@ The `Ready` condition has the following possible values:
 | Status | Reason | Meaning |
 |--------|--------|---------|
 | `True` | `Synced` | All resources were successfully created or updated across all matching namespaces. |
-| `False` | `ReconcileError` | An error occurred during reconciliation. Check the `message` field for details. |
+| `False` | `ReconcileError` | An error occurred during reconciliation. The `message` field names the failing namespaces and their errors. |
+
+!!! note
+    Deleting a resource is best effort. If a delete fails, the error is logged, the resource stays listed in `status.createdResources`, and the delete is retried on the next reconcile; the `Ready` condition does not change. A resource that no longer exists, or whose kind is no longer served, counts as deleted.
 
 You can inspect the full condition with:
 

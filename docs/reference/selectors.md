@@ -2,6 +2,8 @@
 
 Namespaces can be selected using a regex or a label selector. The regex is applied to the namespace name, while the label selector is applied to the namespace labels. The regex and label selector are combined using an AND operation.
 
+Namespaces that are being deleted never match: the resources rendered for them are removed as soon as the deletion starts.
+
 ## Regex
 
 The regex is applied to the namespace name. The regex is applied directly to the namespace name, so it looks for matches in the namespace name itself. For example, the regex `test` will match any namespace that contains the string `test` in its name, such as `test`, `test-1`, or `my-test-namespace`.

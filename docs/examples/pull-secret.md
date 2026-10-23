@@ -6,7 +6,7 @@ Automatic creation of a pull secret in all development namespaces. This is usefu
 
 ## Implementation
 
-This ManagedResource (MR) will clone a pull secret from the default namespace to all namespaces that contain `dev-` in their name.
+This ManagedResource (MR) will clone a pull secret from the default namespace to all namespaces that contain `dev-` in their name. The source secret is watched, so when it is rotated the new credentials are copied right away, see [watching data](../reference/template-data.md#watching-data).
 
 ``` { .yaml }
 apiVersion: automation.kubensync.com/v1alpha1
@@ -19,10 +19,11 @@ spec:
     template:
         data:
         - name: pull_secret
-            type: Secret
-            ref:
-                name: my-pull-secret
-                namespace: default
+          type: Secret
+          ref:
+              name: my-pull-secret
+              namespace: default
+          watch: true
         literal: |
             ---
             apiVersion: v1
