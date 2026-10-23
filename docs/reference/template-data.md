@@ -66,10 +66,11 @@ spec:
             # Continue...
 ```
 
-- It works with every type. Only the referenced resource is watched, and only its name and version are kept in memory, so the contents of a Secret are never cached.
+- It works with every type. Only the referenced resource is watched, with one watch per distinct resource, and only its name and version are kept in memory, so the contents of a Secret are never cached.
+- Any change to the resource triggers a reconcile, including changes to its status or metadata, and every reconcile renders all matching namespaces. Watching a resource that changes often, such as a Deployment scaled by an autoscaler, works, but costs a full reconcile per change.
 - ManagedResources that reference the same resource, or several entries of one ManagedResource that do, share a single watch. The resource is watched if any entry that references it sets `watch: true`.
-- Changes made within half a second of each other are merged into one reconcile.
-- The operator needs the `list` and `watch` permissions on watched resources, besides `get`.
+- Changes made within half a second of the first one are merged into one reconcile.
+- The operator needs the `list` and `watch` permissions on watched resources, besides `get`. The rule can be limited to the watched resource with `resourceNames`. Without them the watch does not start: the reconcile waits up to 10 seconds for it, logs the error and continues without it.
 - With `avoidResourceUpdate: true`, a reconcile caused by a watched resource only creates missing resources; existing ones are not updated.
 
 ### Secret

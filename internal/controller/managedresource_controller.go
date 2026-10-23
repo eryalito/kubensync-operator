@@ -69,7 +69,8 @@ var statusCheckpointInterval = 10 * time.Second
 
 const statusWriteTimeout = 10 * time.Second
 
-// dataWatchDebounce merges bursts of changes to watched data into one reconcile.
+// dataWatchDebounce delays the reconcile caused by a change to watched data, so changes made within it of the
+// first one are merged into that reconcile.
 const dataWatchDebounce = 500 * time.Millisecond
 
 const dataWatchSyncTimeout = 10 * time.Second
@@ -107,15 +108,6 @@ var managedResourceEvents = predicate.Or(
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ManagedResource object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.0/pkg/reconcile
 func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	managedResourceController.Info("Reconciling ManagedResource", "name", req.Name)
 	reconciler.Mutex.Lock()
@@ -241,8 +233,7 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 			lastSave = time.Now()
 		}
 	}
-	// Processing tracked resources can take longer than the namespace pass, so save the
-	// pass first rather than risk losing its tracking if the reconcile stops there.
+	// Save the pass before removing stale resources, so its tracking survives if the reconcile stops there.
 	if err = saveStatus(currentMR); err != nil {
 		return err
 	}

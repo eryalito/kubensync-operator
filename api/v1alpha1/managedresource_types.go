@@ -34,7 +34,7 @@ type ManagedResourceSpecTemplateDataRef struct {
 	Group string `json:"group,omitempty"`
 }
 
-// Defines the kind of resource the ref is pointing to. Could be `Secret` or `ConfigMap`.
+// Defines the kind of resource the ref is pointing to. Could be `Secret`, `ConfigMap` or `KubernetesResource`.
 // +enum
 type ManagedResourceSpecTemplateType string
 
@@ -74,7 +74,7 @@ type ManagedResourceSpecTemplate struct {
 	// Literal defines a go template to be renderized for each namespace matching the selector
 	Literal string `json:"literal,omitempty"`
 
-	// Data defines a set of refences to secrets or configmaps
+	// Data defines the resources whose contents are exposed to the template under .Data.<name>
 	Data []ManagedResourceSpecTemplateData `json:"data,omitempty"`
 }
 
