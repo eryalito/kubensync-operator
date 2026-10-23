@@ -18,7 +18,9 @@ package controller
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
+	"slices"
 	"time"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -221,15 +223,16 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 
 	currentMR := managedresource
 	lastSave := time.Now()
+	// A failing namespace must not keep the others, or the cleanup below, from being reconciled.
+	var namespaceErrs []error
 	for _, nsDef := range nsList.Items {
 		reconciledMR, reconcileErr := rdr.ReconcileNamespaceChange(ctx, currentMR, &nsDef)
 		if reconciledMR != nil {
 			currentMR = reconciledMR
 		}
 		if reconcileErr != nil {
-			// Persist any resources created before the failure so the status keeps tracking them.
-			_ = saveStatus(currentMR)
-			return reconcileErr
+			namespaceErrs = append(namespaceErrs, fmt.Errorf("namespace %s: %w", nsDef.Name, reconcileErr))
+			continue
 		}
 		if time.Since(lastSave) >= statusCheckpointInterval {
 			if err = saveStatus(currentMR); err != nil {
@@ -254,6 +257,12 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		_ = saveStatus(currentMR)
 		return err
 	}
+	if len(namespaceErrs) > 0 {
+		if err = saveStatus(currentMR); err != nil {
+			return err
+		}
+		return joinErrors(namespaceErrs)
+	}
 
 	apimeta.SetStatusCondition(&currentMR.Status.Conditions, metav1.Condition{
 		Type:               automationv1alpha1.ConditionReady,
@@ -263,6 +272,17 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		ObservedGeneration: currentMR.Generation,
 	})
 	return saveStatus(currentMR)
+}
+
+// maxReportedErrors bounds how many errors end up in the Ready condition message.
+const maxReportedErrors = 5
+
+func joinErrors(errs []error) error {
+	if len(errs) <= maxReportedErrors {
+		return stderrors.Join(errs...)
+	}
+	reported := append(slices.Clone(errs[:maxReportedErrors]), fmt.Errorf("and %d more", len(errs)-maxReportedErrors))
+	return stderrors.Join(reported...)
 }
 
 func (r *ManagedResourceReconciler) listNamespaces(ctx context.Context, mr *automationv1alpha1.ManagedResource) (*corev1.NamespaceList, error) {

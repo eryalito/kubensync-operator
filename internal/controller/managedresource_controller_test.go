@@ -994,6 +994,73 @@ data:
 		Eventually(isReady).WithTimeout(30 * time.Second).Should(BeTrue())
 	})
 
+	It("reconciles the other namespaces and removes stale resources when one namespace fails", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("continue", 3, configMapLiteral("continue", "v1"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		orphan := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "orphan", Namespace: "continue-1"}}
+		Expect(k8sClient.Create(ctx, orphan)).To(Succeed())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		mr.Status.CreatedResources = append(mr.Status.CreatedResources, automationv1alpha1.CreatedResource{
+			ApiVersion: "v1", Kind: "ConfigMap", Name: "orphan", Namespace: "continue-1", TriggerNamespace: "continue-gone",
+		})
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+
+		By("changing the template so that the first namespace fails to render")
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		mr.Spec.Template.Literal = configMapLiteral("continue", `{{ if eq .Namespace.Name "continue-0" }}{{ .Namespace.Nope }}{{ else }}v2{{ end }}`)
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).To(MatchError(ContainSubstring("namespace continue-0")))
+
+		for _, ns := range []string{"continue-1", "continue-2"} {
+			Expect(configMapValue(ns, "continue", "value")()).To(Equal("v2"), ns)
+		}
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(orphan), &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(3))
+		Expect(apimeta.IsStatusConditionFalse(mr.Status.Conditions, automationv1alpha1.ConditionReady)).To(BeTrue())
+	})
+
+	It("handles every ManagedResource of a namespace event when one of them fails", func() {
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "nsloop-0"}}
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+		literals := map[string]string{
+			"nsloop-a": configMapLiteral("nsloop-a", "{{ .Namespace.Nope }}"),
+			"nsloop-b": configMapLiteral("nsloop-b", "ok"),
+		}
+		for name, literal := range literals {
+			mr := &automationv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: automationv1alpha1.ManagedResourceSpec{
+					NamespaceSelector: automationv1alpha1.ManagedResourceSpecNamespaceSelector{Regex: "^nsloop-0$"},
+					Template:          automationv1alpha1.ManagedResourceSpecTemplate{Literal: literal},
+				},
+			}
+			Expect(k8sClient.Create(ctx, mr)).To(Succeed())
+			DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, mr))).To(Succeed()) })
+		}
+
+		err := newNamespaceController(newReconciler(k8sClient)).reconcileNamespace(ctx, ns)
+		Expect(err).To(MatchError(ContainSubstring("ManagedResource nsloop-a")))
+		Expect(configMapValue("nsloop-0", "nsloop-b", "value")()).To(Equal("ok"))
+		failed := &automationv1alpha1.ManagedResource{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "nsloop-a"}, failed)).To(Succeed())
+		Expect(apimeta.IsStatusConditionFalse(failed.Status.Conditions, automationv1alpha1.ConditionReady)).To(BeTrue())
+	})
+
+	It("lists only the first errors of a failed reconcile", func() {
+		errs := make([]error, 7)
+		for i := range errs {
+			errs[i] = fmt.Errorf("error %d", i)
+		}
+		Expect(joinErrors(errs).Error()).To(Equal("error 0\nerror 1\nerror 2\nerror 3\nerror 4\nand 2 more"))
+		Expect(joinErrors(errs[:2]).Error()).To(Equal("error 0\nerror 1"))
+		Expect(joinErrors(nil)).To(Succeed())
+	})
+
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {
 		old := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "events", Generation: 1, ResourceVersion: "1"}}
 		updated := func(change func(mr *automationv1alpha1.ManagedResource)) *automationv1alpha1.ManagedResource {
