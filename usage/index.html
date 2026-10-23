@@ -383,6 +383,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#when-a-managedresource-is-reconciled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a ManagedResource is reconciled
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1209,6 +1220,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#when-a-managedresource-is-reconciled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a ManagedResource is reconciled
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1342,18 +1364,41 @@ You can read as many secrets or configmaps as you need, even if they are duplica
 <div class="admonition question">
 <p class="admonition-title">Question</p>
 <ul>
-<li><code>avoidResourceUpdate</code>: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is <code>false</code>.</li>
+<li><code>avoidResourceUpdate</code>: Optional field that changes the default behavior of reconciling existing resources with the desired state. If set to true only non-existing resources will be created an never updated. Default values is <code>false</code>. Existing resources are then left untouched: they are not adopted, so they are not deleted with the ManagedResource.</li>
 <li><code>namespaceSelector</code>: Specifies the namespaces where you want to apply the template. You can use a regular expression (regex) to match multiple namespaces or filter them by its labels. Regex and labels are ANDed, the namespaces must match both of them to be selected. If none of them are defined, all namespaces will be selected.</li>
 <li><code>template</code>: Contains the YAML template that you want to apply to the selected namespaces. You can use Go template syntax to customize the resource based on the namespace.</li>
-<li><code>template.data</code>: Optional field that read Kubernetes resources and expose their contents to be used in the <code>template</code> under <code>.Data.&lt;name&gt;</code>.</li>
+<li><code>template.data</code>: Optional field that read Kubernetes resources and expose their contents to be used in the <code>template</code> under <code>.Data.&lt;name&gt;</code>. Set <code>watch: true</code> on an entry to reconcile the ManagedResource whenever that resource changes, see <a href="../reference/template-data/#watching-data">watching data</a>.</li>
 </ul>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Resources a ManagedResource creates, and existing resources it updates, get it as their owner, so deleting the ManagedResource deletes them too. Recreating it creates them again from the template, so manual changes made to them are lost. With <code>avoidResourceUpdate: true</code> a recreated ManagedResource does not take over existing resources, so they are deleted with the old one and only created again on the next reconcile.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When a namespace stops matching the <code>namespaceSelector</code>, because a label is removed or the namespace is deleted, the resources rendered for it are deleted right away, including cluster-scoped resources and resources in other namespaces.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A resource that every namespace renders the same way, such as a <code>ClusterRole</code> with a fixed name, is tracked under only one of those namespaces. When that namespace stops matching or is deleted, the resource is deleted as well, and it is only created again on the next reconcile of the ManagedResource or of another matching namespace. Until then, anything that references it, such as the RoleBindings of the other namespaces, stops working. Create such shared resources manually, or with a dedicated ManagedResource whose <code>namespaceSelector</code> matches a single namespace.</p>
+</div>
+<h2 id="when-a-managedresource-is-reconciled">When a ManagedResource is reconciled</h2>
+<p>A ManagedResource renders its template into every matching namespace, and removes the resources it no longer renders:</p>
+<ul>
+<li>when it is created, or its spec, labels or annotations change;</li>
+<li>when a resource referenced in <code>template.data</code> with <code>watch: true</code> changes, see <a href="../reference/template-data/#watching-data">watching data</a>;</li>
+<li>when the operator starts, and periodically, about every 10 hours.</li>
+</ul>
+<p>A namespace event (a namespace is created, relabelled or deleted) renders the template only into that namespace, or removes the resources rendered for it when it no longer matches.</p>
+<p>Changes to the status of the ManagedResource, to the resources it renders, and to data resources that are not watched do not trigger a reconcile. To force one, change an annotation:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>annotate<span class="w"> </span>managedresource<span class="w"> </span>managedresource-sample<span class="w"> </span>kubensync.com/reconcile<span class="o">=</span><span class="s2">"</span><span class="k">$(</span>date<span class="w"> </span>+%s<span class="k">)</span><span class="s2">"</span><span class="w"> </span>--overwrite
+</span></code></pre></div>
 <h2 id="status">Status</h2>
 <p>After reconciliation, the operator updates the <code>status</code> of the <code>ManagedResource</code> with the list of resources it has created and a <code>Ready</code> condition that reflects the outcome.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>mr
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>mr
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>NAME                    READY   AGE
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>managedresource-sample  True    5m
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>NAME                    READY   AGE
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>managedresource-sample  True    5m
 </span></code></pre></div>
 <p>The <code>Ready</code> condition has the following possible values:</p>
 <table>
@@ -1373,12 +1418,16 @@ You can read as many secrets or configmaps as you need, even if they are duplica
 <tr>
 <td><code>False</code></td>
 <td><code>ReconcileError</code></td>
-<td>An error occurred during reconciliation. Check the <code>message</code> field for details.</td>
+<td>An error occurred during reconciliation. The <code>message</code> field names the failing namespaces and their errors.</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Deleting a resource is best effort. If a delete fails, the error is logged, the resource stays listed in <code>status.createdResources</code>, and the delete is retried on the next reconcile; the <code>Ready</code> condition does not change. A resource that no longer exists, or whose kind is no longer served, counts as deleted.</p>
+</div>
 <p>You can inspect the full condition with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>mr<span class="w"> </span>managedresource-sample<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.conditions[?(@.type=="Ready")]}'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>mr<span class="w"> </span>managedresource-sample<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.conditions[?(@.type=="Ready")]}'</span>
 </span></code></pre></div>
 <h2 id="examples">Examples</h2>
 <p>Check out some real-world use cases of kubensync in the <a href="../examples/">examples</a> section.</p>

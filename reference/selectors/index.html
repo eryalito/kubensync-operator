@@ -1254,6 +1254,7 @@
 
 <h1 id="namespace-selector">Namespace Selector</h1>
 <p>Namespaces can be selected using a regex or a label selector. The regex is applied to the namespace name, while the label selector is applied to the namespace labels. The regex and label selector are combined using an AND operation.</p>
+<p>Namespaces that are being deleted never match: the resources rendered for them are removed as soon as the deletion starts.</p>
 <h2 id="regex">Regex</h2>
 <p>The regex is applied to the namespace name. The regex is applied directly to the namespace name, so it looks for matches in the namespace name itself. For example, the regex <code>test</code> will match any namespace that contains the string <code>test</code> in its name, such as <code>test</code>, <code>test-1</code>, or <code>my-test-namespace</code>.</p>
 <p>The regex is a standard Go regex, so you can use any valid Go regex syntax. For example, the regex <code>^test-.*</code> will match any namespace that starts with <code>test-</code>, such as <code>test-1</code>, <code>test-2</code>, or <code>test-abc</code>.</p>
