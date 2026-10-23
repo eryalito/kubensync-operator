@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"text/template"
@@ -65,17 +66,23 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 		return nil, err
 	}
 
-	if !matches {
+	if !matches && !slices.ContainsFunc(mrDef.Status.CreatedResources, func(c automationv1alpha1.CreatedResource) bool {
+		return c.TriggerNamespace == namespace.Name
+	}) {
 		return newMRDef, nil
 	}
 
-	manifests, err := r.renderTemplateForNamespace(mrDef, namespace)
-	if err != nil {
-		return nil, err
-	}
-	objs, err := decodeManifests(manifests)
-	if err != nil {
-		return nil, err
+	// A namespace that no longer matches renders nothing, so the resources it triggered are deleted below.
+	var objs []*unstructured.Unstructured
+	if matches {
+		manifests, err := r.renderTemplateForNamespace(mrDef, namespace)
+		if err != nil {
+			return nil, err
+		}
+		objs, err = decodeManifests(manifests)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,14 +40,11 @@ func (r *NamespaceController) Reconcile(ctx context.Context, req reconcile.Reque
 	ns := &corev1.Namespace{}
 	err := r.Get(ctx, req.NamespacedName, ns)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Object not found, which means it was deleted
-			return reconcile.Result{}, nil
+		if !errors.IsNotFound(err) {
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
-	} else if ns.DeletionTimestamp != nil {
-		// Object is being deleted
-		return reconcile.Result{}, nil
+		// Already deleted: handled as terminating, so the resources it triggered are removed.
+		ns = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: req.Name, DeletionTimestamp: &metav1.Time{Time: time.Now()}}}
 	}
 	err = r.reconcileNamespace(ctx, ns)
 	if err != nil {

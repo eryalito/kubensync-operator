@@ -10,6 +10,9 @@ import (
 )
 
 func namespaceMatchesManagedResource(namespace *corev1.Namespace, managedResource *automationv1alpha1.ManagedResource) (bool, error) {
+	if namespace.DeletionTimestamp != nil {
+		return false, nil
+	}
 	regex, err := regexp.Compile(managedResource.Spec.NamespaceSelector.Regex)
 	if err != nil {
 		return false, err
