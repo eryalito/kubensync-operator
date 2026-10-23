@@ -59,6 +59,14 @@ func setConfig(r *ManagedResourceReconciler, c *rest.Config) {
 	r.dynamicClient = dynamic.NewForConfigOrDie(c)
 }
 
+// newNamespaceController returns a namespace controller that shares r's clients.
+func newNamespaceController(r *ManagedResourceReconciler) *NamespaceController {
+	return &NamespaceController{
+		Client: k8sClient, apiReader: k8sClient, config: r.config,
+		discoveryClient: r.discoveryClient, dynamicClient: r.dynamicClient,
+	}
+}
+
 // newCountingReconciler returns a reconciler whose status writes are counted.
 func newCountingReconciler() (*ManagedResourceReconciler, *int) {
 	statusWrites := 0
@@ -204,7 +212,7 @@ var _ = Describe("ManagedResource controller", func() {
 		*statusWrites = 0
 		_, err = r.Reconcile(ctx, req)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(*statusWrites).To(Equal(1))
+		Expect(*statusWrites).To(Equal(2))
 		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
 		Expect(mr.Status.CreatedResources).To(HaveLen(2))
 		cm := &corev1.ConfigMap{}
@@ -606,11 +614,7 @@ metadata:
 		}
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "multi-mr"}}
 		Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, ns))).To(Succeed())
-		mrReconciler := newReconciler(k8sClient)
-		nsController := &NamespaceController{
-			Client: k8sClient, apiReader: k8sClient, config: cfg,
-			discoveryClient: mrReconciler.discoveryClient, dynamicClient: mrReconciler.dynamicClient,
-		}
+		nsController := newNamespaceController(newReconciler(k8sClient))
 
 		Expect(nsController.reconcileNamespace(ctx, ns)).To(Succeed())
 		for _, name := range []string{"multi-a", "multi-b"} {
@@ -691,6 +695,134 @@ metadata:
 		// One per rendered ConfigMap, made by the namespace pass.
 		Expect(configMapGets).To(Equal(3))
 		Expect(namespaceGets).To(BeZero())
+	})
+
+	It("removes the resources of a namespace whose labels stop matching on its namespace event", func() {
+		r, _ := newCountingReconciler()
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "relabelled-0", Labels: map[string]string{"team": "a"}}}
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+		mr, req := createManagedResource("relabelled", 0, configMapLiteral("relabelled", "ok"))
+		mr.Spec.NamespaceSelector.LabelSelector.MatchLabels = map[string]string{"team": "a"}
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(1))
+
+		By("removing the label and handling only the namespace event")
+		ns.Labels = nil
+		Expect(k8sClient.Update(ctx, ns)).To(Succeed())
+		_, err = newNamespaceController(r).Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: ns.Name}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(BeEmpty())
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: "relabelled"}, &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("removes the cluster-scoped resources of a terminating namespace on its namespace event", func() {
+		r, _ := newCountingReconciler()
+		literal := `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubensync-{{ .Namespace.Name }}
+`
+		mr, req := createManagedResource("terminating", 1, literal)
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		role := &unstructured.Unstructured{}
+		role.SetAPIVersion("rbac.authorization.k8s.io/v1")
+		role.SetKind("ClusterRole")
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "kubensync-terminating-0"}, role)).To(Succeed())
+
+		By("deleting the namespace, which envtest leaves terminating")
+		Expect(k8sClient.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "terminating-0"}})).To(Succeed())
+		_, err = newNamespaceController(r).Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "terminating-0"}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(BeEmpty())
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: "kubensync-terminating-0"}, role)
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("removes the resources of a namespace that is already gone on its namespace event", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("gone", 1, configMapLiteral("gone", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		orphan := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "orphan", Namespace: "gone-0"}}
+		Expect(k8sClient.Create(ctx, orphan)).To(Succeed())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		rendered := mr.Status.CreatedResources
+		mr.Status.CreatedResources = append(mr.Status.CreatedResources, automationv1alpha1.CreatedResource{
+			ApiVersion: "v1", Kind: "ConfigMap", Name: "orphan", Namespace: "gone-0", TriggerNamespace: "gone-missing",
+		})
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+
+		_, err = newNamespaceController(r).Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "gone-missing"}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(Equal(rendered))
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(orphan), &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("keeps tracking a resource whose delete fails and still deletes the others", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("best-effort", 3, configMapLiteral("best-effort", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("narrowing the selector while deletes in best-effort-1 are forbidden")
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		mr.Spec.NamespaceSelector.Regex = "^best-effort-0$"
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodDelete || !strings.HasPrefix(req.URL.Path, "/api/v1/namespaces/best-effort-1/configmaps/") {
+				return next.RoundTrip(req)
+			}
+			body := `{"kind":"Status","apiVersion":"v1","status":"Failure","reason":"Forbidden","code":403,"message":"injected"}`
+			return &http.Response{
+				StatusCode: http.StatusForbidden,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
+			}, nil
+		}))
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(2))
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-1", Name: "best-effort"}, &corev1.ConfigMap{})).To(Succeed())
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-2", Name: "best-effort"}, &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+
+		By("retrying the delete on the next reconcile")
+		setConfig(r, cfg)
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(1))
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-1", Name: "best-effort"}, &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("stops tracking resources whose kind is no longer served", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("kind-gone", 1, configMapLiteral("kind-gone", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		rendered := mr.Status.CreatedResources
+		mr.Status.CreatedResources = append(mr.Status.CreatedResources, automationv1alpha1.CreatedResource{
+			ApiVersion: "gone.kubensync.com/v1", Kind: "Widget", Name: "w", Namespace: "kind-gone-0", TriggerNamespace: "kind-gone-missing",
+		})
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+
+		_, err = newNamespaceController(r).Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "kind-gone-missing"}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(Equal(rendered))
 	})
 
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {

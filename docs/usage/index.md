@@ -90,6 +90,12 @@ spec:
 !!! note
     Resources a ManagedResource creates, and existing resources it updates, get it as their owner, so deleting the ManagedResource deletes them too. Recreating it creates them again from the template, so manual changes made to them are lost.
 
+!!! note
+    When a namespace stops matching the `namespaceSelector`, because a label is removed or the namespace is deleted, the resources rendered for it are deleted right away, including cluster-scoped resources and resources in other namespaces.
+
+!!! warning
+    A resource that every namespace renders the same way, such as a `ClusterRole` with a fixed name, is tracked under only one of those namespaces. When that namespace stops matching or is deleted, the resource is deleted as well, and it is only created again on the next reconcile of the ManagedResource or of another matching namespace. Until then, anything that references it, such as the RoleBindings of the other namespaces, stops working. Create such shared resources manually, or with a dedicated ManagedResource whose `namespaceSelector` matches a single namespace.
+
 ## Status
 
 After reconciliation, the operator updates the `status` of the `ManagedResource` with the list of resources it has created and a `Ready` condition that reflects the outcome.
