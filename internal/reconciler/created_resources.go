@@ -6,6 +6,7 @@ import (
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -17,10 +18,25 @@ var (
 	createdResourcesLoggerDebug = ctrl.Log.WithName("created_resources").V((1))
 )
 
-func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedResource *automationv1alpha1.ManagedResource) error {
+func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedResource *automationv1alpha1.ManagedResource, namespaces []corev1.Namespace) error {
+	matching := map[string]bool{}
+	for i := range namespaces {
+		matches, err := namespaceMatchesManagedResource(&namespaces[i], managedResource)
+		if err != nil {
+			reconcilerLogger.Error(err, "Error matching namespace with managed resource")
+			return err
+		}
+		if matches {
+			matching[namespaces[i].Name] = true
+		}
+	}
+
 	// Iterate over a copy: removeResource shifts the remaining entries of the slice in place.
 	for _, createdResource := range slices.Clone(managedResource.Status.CreatedResources) {
-		// Check if the resource still exists
+		// The namespace pass recreates missing resources of matching namespaces.
+		if matching[createdResource.TriggerNamespace] {
+			continue
+		}
 		obj := &unstructured.Unstructured{}
 		obj.SetAPIVersion(createdResource.ApiVersion)
 		obj.SetKind(createdResource.Kind)
@@ -31,55 +47,16 @@ func (r *Reconciler) ReconcileMRCreatedResources(ctx context.Context, managedRes
 			return err
 		}
 
-		_, err = ri.Get(ctx, createdResource.Name, metav1.GetOptions{})
+		createdResourcesLogger.Info("Trigger namespace no longer exists or matches, removing resource", "triggerNamespace", createdResource.TriggerNamespace, "resource", createdResource)
+		err = ri.Delete(ctx, createdResource.Name, metav1.DeleteOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
-				// Resource not found, remove it from status
-				createdResourcesLoggerDebug.Info("Resource not found, removing it from status", "resource", createdResource)
-				managedResource.Status.CreatedResources = removeResource(managedResource.Status.CreatedResources, createdResource)
-			} else {
+			if !errors.IsNotFound(err) {
 				return err
 			}
-		} else {
-			// Logic starts here
-
-			triggerNamespaceObj, err := r.Clientset.CoreV1().Namespaces().Get(ctx, createdResource.TriggerNamespace, metav1.GetOptions{})
-			if err != nil && !errors.IsNotFound(err) {
-				return err
-			}
-			// if trigger the trigger namespace does not exist, remove the resource
-			if errors.IsNotFound(err) {
-				// Trigger namespace not found, remove the resource
-				createdResourcesLogger.Info("Trigger namespace not found, removing resource", "triggerNamespace", createdResource.TriggerNamespace, "resource", createdResource)
-				err = ri.Delete(ctx, createdResource.Name, metav1.DeleteOptions{})
-				if err != nil {
-					return err
-				}
-				managedResource.Status.CreatedResources = removeResource(managedResource.Status.CreatedResources, createdResource)
-				createdResourcesLogger.Info("Resource removed", "resource", createdResource)
-				continue
-			}
-
-			// if the resource trigger namespace no longer matches the managed resource trigger namespace, delete the resource
-
-			matches, err := namespaceMatchesManagedResource(triggerNamespaceObj, managedResource)
-			if err != nil {
-				reconcilerLogger.Error(err, "Error matching namespace with managed resource")
-				return err
-			}
-
-			if !matches {
-				// Trigger namespace does not match, remove the resource
-				createdResourcesLogger.Info("Trigger namespace does not match, removing resource", "triggerNamespace", createdResource.TriggerNamespace, "resource", createdResource)
-				err = ri.Delete(ctx, createdResource.Name, metav1.DeleteOptions{})
-				if err != nil {
-					return err
-				}
-				managedResource.Status.CreatedResources = removeResource(managedResource.Status.CreatedResources, createdResource)
-				createdResourcesLogger.Info("Resource removed", "resource", createdResource)
-			}
-
+			createdResourcesLoggerDebug.Info("Resource already deleted", "resource", createdResource)
 		}
+		managedResource.Status.CreatedResources = removeResource(managedResource.Status.CreatedResources, createdResource)
+		createdResourcesLogger.Info("Resource removed", "resource", createdResource)
 	}
 	return nil
 }
