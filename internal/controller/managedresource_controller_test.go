@@ -767,6 +767,64 @@ metadata:
 		Expect(apierrors.IsNotFound(err)).To(BeTrue())
 	})
 
+	It("keeps tracking a resource whose delete fails and still deletes the others", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("best-effort", 3, configMapLiteral("best-effort", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("narrowing the selector while deletes in best-effort-1 are forbidden")
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		mr.Spec.NamespaceSelector.Regex = "^best-effort-0$"
+		Expect(k8sClient.Update(ctx, mr)).To(Succeed())
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodDelete || !strings.HasPrefix(req.URL.Path, "/api/v1/namespaces/best-effort-1/configmaps/") {
+				return next.RoundTrip(req)
+			}
+			body := `{"kind":"Status","apiVersion":"v1","status":"Failure","reason":"Forbidden","code":403,"message":"injected"}`
+			return &http.Response{
+				StatusCode: http.StatusForbidden,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
+			}, nil
+		}))
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(2))
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-1", Name: "best-effort"}, &corev1.ConfigMap{})).To(Succeed())
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-2", Name: "best-effort"}, &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+
+		By("retrying the delete on the next reconcile")
+		setConfig(r, cfg)
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(HaveLen(1))
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "best-effort-1", Name: "best-effort"}, &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("stops tracking resources whose kind is no longer served", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("kind-gone", 1, configMapLiteral("kind-gone", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		rendered := mr.Status.CreatedResources
+		mr.Status.CreatedResources = append(mr.Status.CreatedResources, automationv1alpha1.CreatedResource{
+			ApiVersion: "gone.kubensync.com/v1", Kind: "Widget", Name: "w", Namespace: "kind-gone-0", TriggerNamespace: "kind-gone-missing",
+		})
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+
+		_, err = newNamespaceController(r).Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "kind-gone-missing"}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(Equal(rendered))
+	})
+
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {
 		old := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "events", Generation: 1, ResourceVersion: "1"}}
 		updated := func(change func(mr *automationv1alpha1.ManagedResource)) *automationv1alpha1.ManagedResource {

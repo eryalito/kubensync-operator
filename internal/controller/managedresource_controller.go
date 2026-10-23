@@ -209,8 +209,7 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		return err
 	}
 
-	// Listed again so namespaces deleted or relabelled during the pass lose their resources now:
-	// the namespace controller does not remove resources of namespaces that stop matching.
+	// Listed again so namespaces deleted or relabelled during the pass lose their resources in this reconcile.
 	nsList, err = r.listNamespaces(ctx, currentMR)
 	if err != nil {
 		return err

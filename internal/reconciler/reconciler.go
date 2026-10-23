@@ -88,10 +88,8 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	remainingPrevCreatedResources := mrDef.Status.CreatedResources
 	createdAndUpdatedResourcesList := []automationv1alpha1.CreatedResource{}
 
-	// On any failure while touching the API server, report the resources created so
-	// far plus the previously tracked ones not yet confirmed gone, so nothing is
-	// dropped from the status or left listed after being deleted. Both loops keep
-	// remainingPrevCreatedResources in sync so this holds at every exit.
+	// On any failure while applying the rendered objects, report the resources created so
+	// far plus the previously tracked ones, so nothing is dropped from the status.
 	defer func() {
 		if err != nil {
 			newMRDef.Status.CreatedResources = append(createdAndUpdatedResourcesList, remainingPrevCreatedResources...)
@@ -166,42 +164,42 @@ func (r *Reconciler) ReconcileNamespaceChange(ctx context.Context, mrDef *automa
 	}
 
 	// Delete the remaining resources that were created in the previous reconciliation but are not needed anymore.
-	// Each entry is removed from remainingPrevCreatedResources once it is confirmed gone or kept, so the deferred
-	// status update keeps reflecting what still exists if a delete fails partway.
-	for len(remainingPrevCreatedResources) > 0 {
-		resource := remainingPrevCreatedResources[0]
+	for _, resource := range remainingPrevCreatedResources {
 		// The trigger namespace should be the same, if not, just skip it and keep it as created
-		if resource.TriggerNamespace != namespace.Name {
+		if resource.TriggerNamespace != namespace.Name || !r.deleteTrackedResource(ctx, resource) {
 			createdAndUpdatedResourcesList = append(createdAndUpdatedResourcesList, resource)
-			remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
-			continue
 		}
-		obj := &unstructured.Unstructured{}
-		obj.SetAPIVersion(resource.ApiVersion)
-		obj.SetKind(resource.Kind)
-		obj.SetName(resource.Name)
-		obj.SetNamespace(resource.Namespace)
-		ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RESTMapper, r.DynamicClient)
-		if err != nil {
-			return nil, err
-		}
-		reconcilerLoggerDebug.Info("Deleting resource", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
-		err = ri.Delete(ctx, resource.Name, metav1.DeleteOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				reconcilerLoggerDebug.Info("Resource already deleted", "Namespace", obj.GetNamespace(), "Name", obj.GetName(), "Kind", obj.GetKind(), "ApiVersion", obj.GetAPIVersion())
-				remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
-				continue
-			}
-			return nil, err
-		}
-		remainingPrevCreatedResources = remainingPrevCreatedResources[1:]
 	}
 
 	newMRDef.Status.CreatedResources = createdAndUpdatedResourcesList
 
 	reconcilerLogger.Info("End reconciling", "Namespace", namespace.Name, "ManagedResource", mrDef.Name)
 	return newMRDef, nil
+}
+
+// deleteTrackedResource deletes the object of a tracked resource and reports whether it is gone. Deletes are best
+// effort: any other failure is logged and the resource stays tracked, so the delete is retried on the next reconcile.
+func (r *Reconciler) deleteTrackedResource(ctx context.Context, resource automationv1alpha1.CreatedResource) bool {
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion(resource.ApiVersion)
+	obj.SetKind(resource.Kind)
+	obj.SetName(resource.Name)
+	obj.SetNamespace(resource.Namespace)
+	reconcilerLoggerDebug.Info("Deleting resource", "resource", resource)
+	ri, err := kube.GetResourceInterfaceForUnstructured(obj, r.RESTMapper, r.DynamicClient)
+	if err == nil {
+		err = ri.Delete(ctx, resource.Name, metav1.DeleteOptions{})
+	}
+	switch {
+	case err == nil:
+		return true
+	case errors.IsNotFound(err) || meta.IsNoMatchError(err):
+		reconcilerLoggerDebug.Info("Resource already deleted", "resource", resource)
+		return true
+	default:
+		reconcilerLogger.Error(err, "Error deleting resource, keeping it tracked to retry on the next reconcile", "resource", resource)
+		return false
+	}
 }
 
 // decodeManifests decodes every document of a rendered template.
