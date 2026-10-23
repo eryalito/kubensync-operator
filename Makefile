@@ -42,8 +42,15 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects, and copy the CRDs into the Helm chart.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	@for crd in config/crd/bases/*.yaml; do \
+		awk 'NR == 1 { print "{{- if .Values.crd.enable }}" } \
+			{ print } \
+			/^metadata:$$/ { print "  labels:"; print "    {{- include \"chart.labels\" . | nindent 4 }}" } \
+			/^  annotations:$$/ { print "    {{- if .Values.crd.keep }}"; print "    \"helm.sh/resource-policy\": keep"; print "    {{- end }}" } \
+			END { print "{{- end -}}" }' $$crd > dist/chart/templates/crd/$$(basename $$crd); \
+	done
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
