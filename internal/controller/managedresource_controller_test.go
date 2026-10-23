@@ -641,6 +641,58 @@ metadata:
 		}
 	})
 
+	It("removes tracked resources whose trigger namespace no longer exists", func() {
+		r, _ := newCountingReconciler()
+		mr, req := createManagedResource("vanished", 1, configMapLiteral("vanished", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		orphan := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "orphan", Namespace: "vanished-0"}}
+		Expect(k8sClient.Create(ctx, orphan)).To(Succeed())
+
+		By("tracking an existing and an already deleted resource of a missing namespace")
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		rendered := mr.Status.CreatedResources
+		for _, name := range []string{"orphan", "already-gone"} {
+			mr.Status.CreatedResources = append(mr.Status.CreatedResources, automationv1alpha1.CreatedResource{
+				ApiVersion: "v1", Kind: "ConfigMap", Name: name, Namespace: "vanished-0", TriggerNamespace: "vanished-gone",
+			})
+		}
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+		Expect(mr.Status.CreatedResources).To(Equal(rendered))
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(orphan), &corev1.ConfigMap{})
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("does not fetch tracked resources or their namespaces one by one", func() {
+		r, _ := newCountingReconciler()
+		_, req := createManagedResource("tracked-gets", 3, configMapLiteral("tracked-gets", "ok"))
+		_, err := r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		configMapGets, namespaceGets := 0, 0
+		setConfig(r, configWithTransport(func(next http.RoundTripper, req *http.Request) (*http.Response, error) {
+			if req.Method == http.MethodGet {
+				segments := strings.Split(strings.TrimPrefix(req.URL.Path, "/api/v1/namespaces/"), "/")
+				switch {
+				case strings.Contains(req.URL.Path, "/configmaps/"):
+					configMapGets++
+				case strings.HasPrefix(req.URL.Path, "/api/v1/namespaces/") && len(segments) == 1:
+					namespaceGets++
+				}
+			}
+			return next.RoundTrip(req)
+		}))
+
+		_, err = r.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		// One per rendered ConfigMap, made by the namespace pass.
+		Expect(configMapGets).To(Equal(3))
+		Expect(namespaceGets).To(BeZero())
+	})
+
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {
 		old := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "events", Generation: 1, ResourceVersion: "1"}}
 		updated := func(change func(mr *automationv1alpha1.ManagedResource)) *automationv1alpha1.ManagedResource {

@@ -135,16 +135,9 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		return err
 	}
 
-	if managedresource.Spec.NamespaceSelector.LabelSelector.MatchLabels == nil {
-		nsList, err = kube.GetNamespaces(ctx, r.config)
-		if err != nil {
-			return err
-		}
-	} else {
-		nsList, err = kube.GetNamespacesByLabel(ctx, r.config, managedresource.Spec.NamespaceSelector.LabelSelector)
-		if err != nil {
-			return err
-		}
+	nsList, err = r.listNamespaces(ctx, managedresource)
+	if err != nil {
+		return err
 	}
 
 	savedStatus := managedresource.Status.DeepCopy()
@@ -216,8 +209,13 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		return err
 	}
 
-	// Process existing resources in status field
-	err = rdr.ReconcileMRCreatedResources(ctx, currentMR)
+	// Listed again so namespaces deleted or relabelled during the pass lose their resources now:
+	// the namespace controller does not remove resources of namespaces that stop matching.
+	nsList, err = r.listNamespaces(ctx, currentMR)
+	if err != nil {
+		return err
+	}
+	err = rdr.ReconcileMRCreatedResources(ctx, currentMR, nsList.Items)
 	if err != nil {
 		_ = saveStatus(currentMR)
 		return err
@@ -231,6 +229,13 @@ func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context
 		ObservedGeneration: currentMR.Generation,
 	})
 	return saveStatus(currentMR)
+}
+
+func (r *ManagedResourceReconciler) listNamespaces(ctx context.Context, mr *automationv1alpha1.ManagedResource) (*corev1.NamespaceList, error) {
+	if mr.Spec.NamespaceSelector.LabelSelector.MatchLabels == nil {
+		return kube.GetNamespaces(ctx, r.config)
+	}
+	return kube.GetNamespacesByLabel(ctx, r.config, mr.Spec.NamespaceSelector.LabelSelector)
 }
 
 // SetupWithManager sets up the controller with the Manager.
