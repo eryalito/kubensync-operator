@@ -23,22 +23,29 @@ import (
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
 	"github.com/eryalito/kubensync-operator/internal/kube"
 	"github.com/eryalito/kubensync-operator/internal/reconciler"
+	"github.com/eryalito/kubensync-operator/internal/watch"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -49,6 +56,7 @@ type ManagedResourceReconciler struct {
 	config          *rest.Config
 	discoveryClient discovery.DiscoveryInterface
 	dynamicClient   dynamic.Interface
+	watches         *watch.Manager
 }
 
 var managedResourceController = ctrl.Log.WithName("managedresource_controller")
@@ -58,6 +66,11 @@ var managedResourceController = ctrl.Log.WithName("managedresource_controller")
 var statusCheckpointInterval = 10 * time.Second
 
 const statusWriteTimeout = 10 * time.Second
+
+// dataWatchDebounce merges bursts of changes to watched data into one reconcile.
+const dataWatchDebounce = 500 * time.Millisecond
+
+const dataWatchSyncTimeout = 10 * time.Second
 
 // resyncPredicate passes the cache's periodic resync events, which GenerationChangedPredicate drops.
 var resyncPredicate = predicate.Funcs{
@@ -98,15 +111,24 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err := r.apiReader.Get(ctx, req.NamespacedName, mr)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Object not found, which means it was deleted
+			r.watches.Remove(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	} else if mr.DeletionTimestamp != nil {
-		// Object is being deleted
+		r.watches.Remove(req.Name)
 		return ctrl.Result{}, nil
 	}
-	err = r.reconcileManagedResource(ctx, mr)
+	mapper := kube.NewRESTMapper(r.discoveryClient)
+	// Watch before rendering, so creating a missing data resource triggers the reconcile that fixes it.
+	keys, err := watch.Keys(mr.Spec.Template.Data, mapper)
+	if err != nil {
+		managedResourceController.Error(err, "Error resolving watched data", "name", mr.Name)
+	}
+	if err := r.watches.Sync(ctx, mr.Name, keys); err != nil {
+		managedResourceController.Error(err, "Error watching data", "name", mr.Name)
+	}
+	err = r.reconcileManagedResource(ctx, mr, mapper)
 	if err != nil {
 		freshMR := &automationv1alpha1.ManagedResource{}
 		if fetchErr := r.apiReader.Get(ctx, req.NamespacedName, freshMR); fetchErr == nil {
@@ -124,10 +146,10 @@ func (r *ManagedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context, managedresource *automationv1alpha1.ManagedResource) error {
+func (r *ManagedResourceReconciler) reconcileManagedResource(ctx context.Context, managedresource *automationv1alpha1.ManagedResource, mapper apimeta.RESTMapper) error {
 	var err error
 	var nsList *corev1.NamespaceList
-	rdr := reconciler.Reconciler{RESTMapper: kube.NewRESTMapper(r.discoveryClient), DynamicClient: r.dynamicClient}
+	rdr := reconciler.Reconciler{RESTMapper: mapper, DynamicClient: r.dynamicClient}
 
 	rdr.Clientset, err = kubernetes.NewForConfig(r.config)
 
@@ -251,8 +273,24 @@ func (r *ManagedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	r.dynamicClient = dynamicClient
+	// Watched objects are small, so compressing their watch streams only costs each one a gzip reader.
+	watchConfig := rest.CopyConfig(mgr.GetConfig())
+	watchConfig.DisableCompression = true
+	metadataClient, err := metadata.NewForConfig(watchConfig)
+	if err != nil {
+		return err
+	}
+	r.watches = watch.NewManager(watch.MetadataInformers(metadataClient), dataWatchSyncTimeout)
+	if err := mgr.Add(r.watches); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&automationv1alpha1.ManagedResource{}, builder.WithPredicates(managedResourceEvents)).
+		WatchesRawSource(source.Channel(r.watches.Events(), handler.TypedFuncs[string, reconcile.Request]{
+			GenericFunc: func(_ context.Context, e event.TypedGenericEvent[string], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{Name: e.Object}}, dataWatchDebounce)
+			},
+		})).
 		Named("managedresource").
 		Complete(r)
 }

@@ -36,7 +36,7 @@ A Helm chart to distribute the kubensync operator.
 | controllerManager.container.readinessProbe.initialDelaySeconds | int | `5` |  |
 | controllerManager.container.readinessProbe.periodSeconds | int | `10` |  |
 | controllerManager.container.resources.limits.cpu | string | `"500m"` |  |
-| controllerManager.container.resources.limits.memory | string | `"128Mi"` |  |
+| controllerManager.container.resources.limits.memory | string | `"192Mi"` |  |
 | controllerManager.container.resources.requests.cpu | string | `"10m"` |  |
 | controllerManager.container.resources.requests.memory | string | `"64Mi"` |  |
 | controllerManager.container.securityContext.allowPrivilegeEscalation | bool | `false` |  |

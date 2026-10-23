@@ -57,6 +57,8 @@ type ManagedResourceSpecTemplateData struct {
 	Name string                             `json:"name,omitempty"`
 	Type ManagedResourceSpecTemplateType    `json:"type,omitempty"`
 	Ref  ManagedResourceSpecTemplateDataRef `json:"ref,omitempty"`
+	// Watch reconciles the ManagedResource whenever the referenced resource changes.
+	Watch bool `json:"watch,omitempty"`
 }
 
 // ManagedResourceSpecNamespaceSelector defines the selector used to specify which namespaces are affected

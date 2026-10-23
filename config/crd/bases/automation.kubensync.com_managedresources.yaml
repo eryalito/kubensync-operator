@@ -146,6 +146,10 @@ spec:
                           description: Defines the kind of resource the ref is pointing
                             to. Could be `Secret` or `ConfigMap`.
                           type: string
+                        watch:
+                          description: Watch reconciles the ManagedResource whenever
+                            the referenced resource changes.
+                          type: boolean
                       type: object
                     type: array
                   literal:
