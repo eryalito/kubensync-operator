@@ -31,10 +31,12 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,13 +46,62 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	automationv1alpha1 "github.com/eryalito/kubensync-operator/api/v1alpha1"
+	"github.com/eryalito/kubensync-operator/internal/watch"
 )
 
 // newReconciler returns a reconciler that uses c for the ManagedResource and cfg for everything else.
 func newReconciler(c client.Client) *ManagedResourceReconciler {
-	r := &ManagedResourceReconciler{Client: c, apiReader: c, discoveryClient: discovery.NewDiscoveryClientForConfigOrDie(cfg)}
+	r := &ManagedResourceReconciler{
+		Client: c, apiReader: c, discoveryClient: discovery.NewDiscoveryClientForConfigOrDie(cfg),
+		watches: startWatchManager(func(context.Context, watch.Key, func()) (func() bool, error) { return func() bool { return true }, nil }),
+	}
 	setConfig(r, cfg)
 	return r
+}
+
+func startWatchManager(start watch.StartFunc) *watch.Manager {
+	m := watch.NewManager(start, time.Second)
+	go func() { _ = m.Start(ctx) }()
+	return m
+}
+
+func newTestManager() ctrl.Manager {
+	skipNameValidation := true
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:                 scheme.Scheme,
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+		Controller:             config.Controller{SkipNameValidation: &skipNameValidation},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	return mgr
+}
+
+// runManagedResourceController runs a ManagedResource controller until the spec ends.
+func runManagedResourceController() {
+	mgr := newTestManager()
+	Expect((&ManagedResourceReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr)).To(Succeed())
+	mgrCtx, stop := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer GinkgoRecover()
+		defer close(done)
+		Expect(mgr.Start(mgrCtx)).To(Succeed())
+	}()
+	DeferCleanup(func() {
+		stop()
+		<-done
+	})
+}
+
+func configMapValue(namespace, name, key string) func() string {
+	return func() string {
+		cm := &corev1.ConfigMap{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, cm); err != nil {
+			return ""
+		}
+		return cm.Data[key]
+	}
 }
 
 // setConfig points the reconciler's requests for templated resources at c.
@@ -509,21 +560,15 @@ metadata:
 	})
 
 	It("wires its clients in SetupWithManager", func() {
-		skipNameValidation := true
-		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:                 scheme.Scheme,
-			Metrics:                metricsserver.Options{BindAddress: "0"},
-			HealthProbeBindAddress: "0",
-			Controller:             config.Controller{SkipNameValidation: &skipNameValidation},
-		})
-		Expect(err).NotTo(HaveOccurred())
+		mgr := newTestManager()
 		mrController := &ManagedResourceReconciler{Client: mgr.GetClient()}
 		Expect(mrController.SetupWithManager(mgr)).To(Succeed())
+		go func() { _ = mrController.watches.Start(ctx) }()
 		nsController := &NamespaceController{Client: mgr.GetClient()}
 		Expect(nsController.SetupWithManager(mgr)).To(Succeed())
 		mr, req := createManagedResource("wired", 1, configMapLiteral("wired", "ok"))
 
-		_, err = mrController.Reconcile(ctx, req)
+		_, err := mrController.Reconcile(ctx, req)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("handling a namespace created afterwards")
@@ -823,6 +868,113 @@ metadata:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
 		Expect(mr.Status.CreatedResources).To(Equal(rendered))
+	})
+
+	It("delivers changes of a watched object until nothing watches it", func() {
+		watchCtx, stop := context.WithCancel(ctx)
+		DeferCleanup(stop)
+		m := watch.NewManager(watch.MetadataInformers(metadata.NewForConfigOrDie(cfg)), 10*time.Second)
+		go func() { _ = m.Start(watchCtx) }()
+		watched := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "informer-watched", Namespace: "default"}, Data: map[string]string{"v": "1"}}
+		other := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "informer-other", Namespace: "default"}, Data: map[string]string{"v": "1"}}
+		Expect(k8sClient.Create(ctx, watched)).To(Succeed())
+		Expect(k8sClient.Create(ctx, other)).To(Succeed())
+		key := watch.Key{GVR: schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}, Namespace: "default", Name: watched.Name}
+
+		Expect(m.Sync(ctx, "watcher", []watch.Key{key})).To(Succeed())
+		Consistently(m.Events()).WithTimeout(time.Second).ShouldNot(Receive())
+
+		By("changing another object of the same namespace")
+		other.Data["v"] = "2"
+		Expect(k8sClient.Update(ctx, other)).To(Succeed())
+		Consistently(m.Events()).WithTimeout(time.Second).ShouldNot(Receive())
+
+		By("changing the watched object")
+		watched.Data["v"] = "2"
+		Expect(k8sClient.Update(ctx, watched)).To(Succeed())
+		Eventually(m.Events()).WithTimeout(10 * time.Second).Should(Receive(Equal(event.TypedGenericEvent[string]{Object: "watcher"})))
+
+		By("changing it after the last watcher stopped watching")
+		Expect(m.Sync(ctx, "watcher", nil)).To(Succeed())
+		watched.Data["v"] = "3"
+		Expect(k8sClient.Update(ctx, watched)).To(Succeed())
+		Consistently(m.Events()).WithTimeout(2 * time.Second).ShouldNot(Receive())
+	})
+
+	It("reconciles when watched data changes, but not when unwatched data does", func() {
+		runManagedResourceController()
+		Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "data-watch-0"}})).To(Succeed())
+		for _, name := range []string{"watched-src", "unwatched-src"} {
+			src := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"}, Data: map[string]string{"v": "1"}}
+			Expect(k8sClient.Create(ctx, src)).To(Succeed())
+		}
+		mr := &automationv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-watch"},
+			Spec: automationv1alpha1.ManagedResourceSpec{
+				NamespaceSelector: automationv1alpha1.ManagedResourceSpecNamespaceSelector{Regex: "^data-watch-0$"},
+				Template: automationv1alpha1.ManagedResourceSpecTemplate{
+					Literal: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-watch
+  namespace: {{ .Namespace.Name }}
+data:
+  watched: {{ index .Data.w "v" | quote }}
+  unwatched: {{ index .Data.u "v" | quote }}
+`,
+					Data: []automationv1alpha1.ManagedResourceSpecTemplateData{
+						{Name: "w", Type: automationv1alpha1.ConfigMap, Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "watched-src", Namespace: "default"}, Watch: true},
+						{Name: "u", Type: automationv1alpha1.ConfigMap, Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{Name: "unwatched-src", Namespace: "default"}},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, mr)).To(Succeed())
+		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, mr))).To(Succeed()) })
+		Eventually(configMapValue("data-watch-0", "data-watch", "watched")).WithTimeout(30 * time.Second).Should(Equal("1"))
+
+		By("changing the unwatched data")
+		src := &corev1.ConfigMap{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "unwatched-src"}, src)).To(Succeed())
+		src.Data["v"] = "2"
+		Expect(k8sClient.Update(ctx, src)).To(Succeed())
+		Consistently(configMapValue("data-watch-0", "data-watch", "unwatched")).WithTimeout(5 * time.Second).Should(Equal("1"))
+
+		By("changing the watched data")
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "watched-src"}, src)).To(Succeed())
+		src.Data["v"] = "2"
+		Expect(k8sClient.Update(ctx, src)).To(Succeed())
+		Eventually(configMapValue("data-watch-0", "data-watch", "watched")).WithTimeout(30 * time.Second).Should(Equal("2"))
+		Expect(configMapValue("data-watch-0", "data-watch", "unwatched")()).To(Equal("2"))
+	})
+
+	It("reconciles when a watched resource that was missing is created", func() {
+		runManagedResourceController()
+		Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "data-late-0"}})).To(Succeed())
+		mr := &automationv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: "data-late"},
+			Spec: automationv1alpha1.ManagedResourceSpec{
+				NamespaceSelector: automationv1alpha1.ManagedResourceSpecNamespaceSelector{Regex: "^data-late-0$"},
+				Template: automationv1alpha1.ManagedResourceSpecTemplate{
+					Literal: configMapLiteral("data-late", `{{ if .Data.sa }}present{{ else }}absent{{ end }}`),
+					Data: []automationv1alpha1.ManagedResourceSpecTemplateData{{
+						Name: "sa",
+						Type: automationv1alpha1.KubernetesResource,
+						Ref: automationv1alpha1.ManagedResourceSpecTemplateDataRef{
+							ApiVersion: "v1", Kind: "ServiceAccount", Name: "late-sa", Namespace: "data-late-0",
+						},
+						Watch: true,
+					}},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, mr)).To(Succeed())
+		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, mr))).To(Succeed()) })
+		Eventually(configMapValue("data-late-0", "data-late", "value")).WithTimeout(30 * time.Second).Should(Equal("absent"))
+
+		sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "late-sa", Namespace: "data-late-0"}}
+		Expect(k8sClient.Create(ctx, sa)).To(Succeed())
+		Eventually(configMapValue("data-late-0", "data-late", "value")).WithTimeout(30 * time.Second).Should(Equal("present"))
 	})
 
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {

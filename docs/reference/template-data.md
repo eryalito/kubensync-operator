@@ -42,6 +42,36 @@ spec:
             # Continue...
 ```
 
+### Watching data
+
+The data is read every time the ManagedResource is reconciled, so by default a change to a data resource only reaches the rendered resources when the ManagedResource is reconciled for another reason. Set `watch: true` on a data entry to reconcile the ManagedResource as soon as that resource is created, changed or deleted.
+
+```yaml
+apiVersion: automation.kubensync.com/v1alpha1
+kind: ManagedResource
+metadata:
+    name: managedresource-sample
+spec:
+    namespaceSelector:
+        regex: "^dev-.*"
+    template:
+        data:
+        - name: my_configmap
+          type: ConfigMap
+          ref:
+            name: my-configmap
+            namespace: default
+          watch: true
+        literal: |
+            # Continue...
+```
+
+- It works with every type. Only the referenced resource is watched, and only its metadata is kept in memory, so the contents of a Secret are never cached.
+- ManagedResources that reference the same resource, or several entries of one ManagedResource that do, share a single watch. The resource is watched if any entry that references it sets `watch: true`.
+- Changes made within a couple of seconds of each other are merged into one reconcile.
+- The operator needs the `list` and `watch` permissions on watched resources, besides `get`.
+- With `avoidResourceUpdate: true`, a reconcile caused by a watched resource only creates missing resources; existing ones are not updated.
+
 ### Secret
 
 The `Secret` type is used to load a Kubernetes Secret resource. The `ref` field must contain only the name and namespace of the Secret resource. The Secret resource is loaded and processed, so the keys and values of the Secret are available in the template using the `.Data.<name>` syntax. The values are automatically base64 decoded, so no additional processing is needed.
