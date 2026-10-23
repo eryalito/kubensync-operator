@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -92,6 +93,8 @@ func (r *NamespaceController) reconcileNamespace(ctx context.Context, namespace 
 		return err
 	}
 
+	// A failing ManagedResource must not keep the others from handling this namespace.
+	var errs []error
 	for _, mrDef := range mrDefList.Items {
 		originalMRDef := mrDef.DeepCopy()
 		newMRDef, err := rdr.ReconcileNamespaceChange(ctx, &mrDef, namespace)
@@ -109,16 +112,16 @@ func (r *NamespaceController) reconcileNamespace(ctx context.Context, namespace 
 				ObservedGeneration: statusMR.Generation,
 			})
 			_ = r.Status().Update(ctx, statusMR)
-			return err
+			errs = append(errs, fmt.Errorf("ManagedResource %s: %w", mrDef.Name, err))
+			continue
 		}
 		if kube.AreManagedResourcesStatusDifferent(originalMRDef.Status, newMRDef.Status) {
 			namespaceControllerLogger.Info("Updating status", "name", newMRDef.Name)
-			err = r.Status().Update(ctx, newMRDef)
-			if err != nil {
-				return err
+			if err := r.Status().Update(ctx, newMRDef); err != nil {
+				errs = append(errs, fmt.Errorf("ManagedResource %s: %w", mrDef.Name, err))
 			}
 		}
 	}
 
-	return nil
+	return joinErrors(errs)
 }
