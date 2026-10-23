@@ -68,7 +68,7 @@ spec:
 
 - It works with every type. Only the referenced resource is watched, and only its metadata is kept in memory, so the contents of a Secret are never cached.
 - ManagedResources that reference the same resource, or several entries of one ManagedResource that do, share a single watch. The resource is watched if any entry that references it sets `watch: true`.
-- Changes made within a couple of seconds of each other are merged into one reconcile.
+- Changes made within half a second of each other are merged into one reconcile.
 - The operator needs the `list` and `watch` permissions on watched resources, besides `get`.
 - With `avoidResourceUpdate: true`, a reconcile caused by a watched resource only creates missing resources; existing ones are not updated.
 

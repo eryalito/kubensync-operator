@@ -68,7 +68,7 @@ var statusCheckpointInterval = 10 * time.Second
 const statusWriteTimeout = 10 * time.Second
 
 // dataWatchDebounce merges bursts of changes to watched data into one reconcile.
-const dataWatchDebounce = 2 * time.Second
+const dataWatchDebounce = 500 * time.Millisecond
 
 const dataWatchSyncTimeout = 10 * time.Second
 
