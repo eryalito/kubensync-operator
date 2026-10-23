@@ -79,6 +79,18 @@ var resyncPredicate = predicate.Funcs{
 	},
 }
 
+// readyBecameFalsePredicate passes the status write that marks the ManagedResource not ready. Only this
+// controller sets Ready back to true, so a failure written by the namespace controller must reach it.
+var readyBecameFalsePredicate = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		oldMR, okOld := e.ObjectOld.(*automationv1alpha1.ManagedResource)
+		newMR, okNew := e.ObjectNew.(*automationv1alpha1.ManagedResource)
+		return okOld && okNew &&
+			!apimeta.IsStatusConditionFalse(oldMR.Status.Conditions, automationv1alpha1.ConditionReady) &&
+			apimeta.IsStatusConditionFalse(newMR.Status.Conditions, automationv1alpha1.ConditionReady)
+	},
+}
+
 // managedResourceEvents ignores status-only updates, so the controller's own status writes do not
 // trigger another reconcile.
 var managedResourceEvents = predicate.Or(
@@ -86,6 +98,7 @@ var managedResourceEvents = predicate.Or(
 	predicate.AnnotationChangedPredicate{},
 	predicate.LabelChangedPredicate{},
 	resyncPredicate,
+	readyBecameFalsePredicate,
 )
 
 // +kubebuilder:rbac:groups=automation.kubensync.com,resources=managedresources,verbs=get;list;watch;create;update;patch;delete

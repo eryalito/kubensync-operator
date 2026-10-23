@@ -3,12 +3,14 @@ package watch
 import (
 	"context"
 	"math/rand/v2"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -282,6 +284,32 @@ func TestRandomOperations(t *testing.T) {
 		if t.Failed() {
 			t.Fatalf("diverged at operation %d on %s, specs %v", i, name, specs)
 		}
+	}
+}
+
+func TestMinimalMetadataKeepsOnlyWhatHandlersCompare(t *testing.T) {
+	full := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "s", Namespace: "ns", ResourceVersion: "7", UID: "uid",
+			Labels:        map[string]string{"app": "x"},
+			Annotations:   map[string]string{"kubectl.kubernetes.io/last-applied-configuration": `{"data":{"password":"c2VjcmV0"}}`},
+			ManagedFields: []metav1.ManagedFieldsEntry{{Manager: "kubectl"}},
+		},
+	}
+	got, err := minimalMetadata(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &metav1.PartialObjectMetadata{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "ns", ResourceVersion: "7"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("minimalMetadata() = %+v, want %+v", got, want)
+	}
+	if other, _ := minimalMetadata("not metadata"); other != "not metadata" {
+		t.Errorf("minimalMetadata() changed an object of another type: %v", other)
 	}
 }
 

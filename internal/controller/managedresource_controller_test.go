@@ -977,6 +977,23 @@ data:
 		Eventually(configMapValue("data-late-0", "data-late", "value")).WithTimeout(30 * time.Second).Should(Equal("present"))
 	})
 
+	It("reconciles again when another writer marks it not ready", func() {
+		runManagedResourceController()
+		mr, req := createManagedResource("ready-recovery", 1, configMapLiteral("ready-recovery", "ok"))
+		isReady := func() bool {
+			Expect(k8sClient.Get(ctx, req.NamespacedName, mr)).To(Succeed())
+			return apimeta.IsStatusConditionTrue(mr.Status.Conditions, automationv1alpha1.ConditionReady)
+		}
+		Eventually(isReady).WithTimeout(30 * time.Second).Should(BeTrue())
+
+		By("writing a failure the way the namespace controller does")
+		apimeta.SetStatusCondition(&mr.Status.Conditions, metav1.Condition{
+			Type: automationv1alpha1.ConditionReady, Status: metav1.ConditionFalse, Reason: "ReconcileError", Message: "transient", ObservedGeneration: mr.Generation,
+		})
+		Expect(k8sClient.Status().Update(ctx, mr)).To(Succeed())
+		Eventually(isReady).WithTimeout(30 * time.Second).Should(BeTrue())
+	})
+
 	It("reconciles on spec, metadata and resync events, but not on status writes", func() {
 		old := &automationv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "events", Generation: 1, ResourceVersion: "1"}}
 		updated := func(change func(mr *automationv1alpha1.ManagedResource)) *automationv1alpha1.ManagedResource {
@@ -996,7 +1013,19 @@ data:
 			mr.Labels = map[string]string{"kubensync.com/trigger": "true"}
 		})
 
+		readyFalse := updated(func(mr *automationv1alpha1.ManagedResource) {
+			mr.Status.Conditions = []metav1.Condition{{Type: automationv1alpha1.ConditionReady, Status: metav1.ConditionFalse, Reason: "ReconcileError"}}
+		})
+		readyTrue := old.DeepCopy()
+		readyTrue.Status.Conditions = []metav1.Condition{{Type: automationv1alpha1.ConditionReady, Status: metav1.ConditionTrue, Reason: "Synced"}}
+		stillFalse := readyFalse.DeepCopy()
+		stillFalse.ResourceVersion = "3"
+		stillFalse.Status.Conditions[0].Message = "another error"
+
 		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: statusOnly})).To(BeFalse())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: readyTrue, ObjectNew: readyFalse})).To(BeTrue())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: readyFalse})).To(BeTrue())
+		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: readyFalse, ObjectNew: stillFalse})).To(BeFalse())
 		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: specChange})).To(BeTrue())
 		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: annotationChange})).To(BeTrue())
 		Expect(managedResourceEvents.Update(event.UpdateEvent{ObjectOld: old, ObjectNew: labelChange})).To(BeTrue())

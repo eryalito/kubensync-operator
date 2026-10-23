@@ -203,6 +203,9 @@ func MetadataInformers(client metadata.Interface) StartFunc {
 		informer := metadatainformer.NewFilteredMetadataInformer(client, key.GVR, key.Namespace, 0, cache.Indexers{}, func(o *metav1.ListOptions) {
 			o.FieldSelector = fields.OneTermEqualSelector("metadata.name", key.Name).String()
 		}).Informer()
+		if err := informer.SetTransform(minimalMetadata); err != nil {
+			return nil, err
+		}
 		if err := informer.SetWatchErrorHandlerWithContext(func(_ context.Context, _ *cache.Reflector, err error) {
 			watchLogger.Error(err, "Error watching data resource", "resource", key.GVR.String(), "namespace", key.Namespace, "name", key.Name)
 		}); err != nil {
@@ -226,6 +229,19 @@ func MetadataInformers(client metadata.Interface) StartFunc {
 		go informer.RunWithContext(ctx)
 		return informer.HasSynced, nil
 	}
+}
+
+// minimalMetadata keeps only what the event handlers compare. Full metadata would cache annotations such as
+// kubectl's last-applied-configuration, which holds the contents of a Secret.
+func minimalMetadata(obj interface{}) (interface{}, error) {
+	m, ok := obj.(*metav1.PartialObjectMetadata)
+	if !ok {
+		return obj, nil
+	}
+	return &metav1.PartialObjectMetadata{
+		TypeMeta:   m.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{Name: m.Name, Namespace: m.Namespace, ResourceVersion: m.ResourceVersion},
+	}, nil
 }
 
 func resourceVersion(obj interface{}) string {
